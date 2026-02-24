@@ -1,0 +1,111 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isNotBanned() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.banned == false;
+    }
+    
+    function canAccessEvent(eventId) {
+      return isOwner(get(/databases/$(database)/documents/events/$(eventId).data.creatorId)) ||
+             isAdmin();
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && 
+                    isOwner(userId) &&
+                    request.resource.data.keys().hasAll(['email', 'username', 'role']) &&
+                    request.resource.data.role in ['user', 'admin'];
+    }
+    
+    // Events collection
+    match /events/{eventId} {
+      allow read: if request.auth != null; // Solo usuarios autenticados pueden ver eventos
+      allow create: if request.auth != null; // Solo requiere autenticación
+      allow update, delete: if true; // Temporalmente permitir todo
+
+      // Chat messages subcollection
+      match /messages/{messageId} {
+        allow read: if request.auth != null &&
+          (request.auth.uid in get(/databases/$(database)/documents/events/$(eventId)).data.attendees ||
+           request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.creatorId);
+        allow create: if request.auth != null &&
+          (request.auth.uid in get(/databases/$(database)/documents/events/$(eventId)).data.attendees ||
+           request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.creatorId) &&
+          request.time < get(/databases/$(database)/documents/events/$(eventId)).data.chatExpiration;
+        allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+        allow delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      }
+
+      // Attendees subcollection
+      match /attendees/{attendeeId} {
+        allow read: if isNotBanned();
+        allow write: if isOwner(attendeeId) || canAccessEvent(eventId);
+        allow create: if isOwner(attendeeId) &&
+                     isNotBanned() &&
+                     request.resource.data.keys().hasAll(['userId', 'status', 'timestamp']) &&
+                     request.resource.data.status in ['GOING', 'INTERESTED'];
+      }
+    }
+    
+    // Chats collection
+    match /chats/{chatId} {
+      allow read, write: if isNotBanned();
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        allow read: if isNotBanned();
+        allow create: if isAuthenticated() && 
+                     isNotBanned() &&
+                     isOwner(request.resource.data.userId) &&
+                     request.resource.data.keys().hasAll(['text', 'type', 'timestamp', 'userId']) &&
+                     request.resource.data.type in ['TEXT', 'IMAGE'];
+        allow update: if isOwner(get(/databases/$(database)/documents/chats/$(chatId)/messages/$(messageId).data.userId)) ||
+                     isAdmin();
+        allow delete: if isOwner(get(/databases/$(database)/documents/chats/$(chatId)/messages/$(messageId).data.userId)) ||
+                     isAdmin();
+      }
+    }
+    
+    // Reports collection
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated() && 
+                    isNotBanned() &&
+                    isOwner(request.resource.data.reporterId) &&
+                    request.resource.data.keys().hasAll(['targetType', 'targetId', 'reporterId', 'reason', 'status']) &&
+                    request.resource.data.targetType in ['USER', 'EVENT', 'MESSAGE'];
+      allow update: if isAdmin();
+    }
+    
+    // FCM Tokens collection
+    match /fcmTokens/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && 
+                    request.resource.data.keys().hasAll(['token', 'platform']);
+    }
+    
+    // Default deny rule
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
