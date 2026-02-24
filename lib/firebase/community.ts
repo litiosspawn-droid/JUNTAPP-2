@@ -1,0 +1,109 @@
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from './client';
+import type { Event } from './events';
+
+// Re-export types
+export type { Event } from './events';
+
+// Get all users (for community page)
+export async function getAllUsers() {
+  try {
+    console.log('👥 Fetching all users for community...');
+
+    const usersQuery = query(
+      collection(db, 'users'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const usersSnapshot = await getDocs(usersQuery);
+    const users = usersSnapshot.docs.map(doc => ({
+      uid: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate(),
+      lastLogin: doc.data().lastLogin?.toDate(),
+    }));
+
+    console.log(`✅ Found ${users.length} users in community`);
+    return users;
+  } catch (error) {
+    console.error('❌ Error fetching users for community:', error);
+    return [];
+  }
+}
+
+// Get all events (for community page)
+export async function getAllEvents() {
+  try {
+    console.log('📅 Fetching all events for community...');
+
+    const eventsQuery = query(
+      collection(db, 'events'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const eventsSnapshot = await getDocs(eventsQuery);
+    const events: Event[] = eventsSnapshot.docs.map(doc => {
+      const eventData = doc.data();
+      return {
+        id: doc.id,
+        ...eventData,
+        createdAt: eventData.createdAt?.toDate(),
+        updatedAt: eventData.updatedAt?.toDate(),
+        // Ensure location is properly formatted
+        location: eventData.location || {
+          latitude: eventData.lat || 0,
+          longitude: eventData.lng || 0,
+        },
+      } as Event;
+    });
+
+    console.log(`✅ Found ${events.length} events in community`);
+    return events;
+  } catch (error) {
+    console.error('❌ Error fetching events for community:', error);
+    return [];
+  }
+}
+
+// Get community stats
+export async function getCommunityStats() {
+  try {
+    const [users, events] = await Promise.all([
+      getAllUsers(),
+      getAllEvents()
+    ]);
+
+    const stats = {
+      totalUsers: users.length,
+      totalEvents: events.length,
+      activeUsers: users.filter(user => {
+        const userEvents = events.filter(event => event.createdBy === user.uid);
+        return userEvents.length > 0;
+      }).length,
+      totalAttendees: events.reduce((sum, event) => sum + (Number(event.attendees) || 0), 0),
+      recentEvents: events.slice(0, 5), // Last 5 events
+      topOrganizers: users
+        .map(user => ({
+          ...user,
+          eventCount: events.filter(event => event.createdBy === user.uid).length,
+          totalAttendees: events
+            .filter(event => event.createdBy === user.uid)
+            .reduce((sum, event) => sum + (Number(event.attendees) || 0), 0)
+        }))
+        .sort((a, b) => b.eventCount - a.eventCount)
+        .slice(0, 5)
+    };
+
+    return stats;
+  } catch (error) {
+    console.error('❌ Error getting community stats:', error);
+    return {
+      totalUsers: 0,
+      totalEvents: 0,
+      activeUsers: 0,
+      totalAttendees: 0,
+      recentEvents: [],
+      topOrganizers: []
+    };
+  }
+}
