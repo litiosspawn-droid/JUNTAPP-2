@@ -1,10 +1,13 @@
 import { db } from './firebase/client';
-import * as geofirestore from 'geofirestore';
+// import * as geofirestore from 'geofirestore';
 
 // Crea una instancia de Geofirestore
-const geofire = geofirestore.initializeApp(db);
+// const geofire = geofirestore.initializeApp(db);
 
 // Referencia a la colección con capacidad geoespacial
-const eventsGeo = geofire.collection('events');
+// const eventsGeo = geofire.collection('events');
 
-export { eventsGeo };
+// export { eventsGeo };
+
+// Temporary export to avoid errors
+export const eventsGeo = null;

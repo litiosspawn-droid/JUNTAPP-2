@@ -1,4 +1,4 @@
-import { doc, getDoc, collection, query, where, getDocs, orderBy, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, addDoc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { db } from './client';
 import type { Event } from './events';
 

@@ -102,9 +102,9 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
 
     try {
       await addDoc(collection(db, 'events', eventId, 'messages'), {
-        userId: user.uid,
-        userName: user.displayName || 'Usuario',
-        userPhoto: user.photoURL,
+        userId: user!.uid,
+        userName: user!.displayName || 'Usuario',
+        userPhoto: user!.photoURL,
         text: newMessage.trim(),
         timestamp: serverTimestamp(),
         reactions: [],
@@ -137,7 +137,7 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
       } else {
         // Agregar reacción
         await updateDoc(messageRef, {
-          reactions: arrayUnion({ emoji, userId: user.uid })
+          reactions: arrayUnion({ emoji, userId: user!.uid })
         })
       }
     } catch (error) {
@@ -159,7 +159,7 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
       const messageRef = doc(db, 'events', eventId, 'messages', messageId)
       await updateDoc(messageRef, {
         reported: true,
-        reportedBy: arrayUnion(user.uid),
+        reportedBy: arrayUnion(user!.uid),
         reportedAt: serverTimestamp()
       })
       alert('Mensaje reportado exitosamente. Los administradores lo revisarán.')

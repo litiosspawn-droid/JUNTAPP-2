@@ -1,6 +1,6 @@
 // Firebase authentication utilities
 import { auth, db } from './client';
-import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, User } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
 export interface User {
@@ -32,8 +32,8 @@ export const signUp = async (email: string, password: string, displayName?: stri
     });
 
     return user;
-  } catch (error: any) {
-    throw new Error(error.message);
+  } catch (error: unknown) {
+    throw new Error((error as Error).message);
   }
 };
 
@@ -41,21 +41,21 @@ export const signIn = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return userCredential.user;
-  } catch (error: any) {
-    throw new Error(error.message);
+  } catch (error: unknown) {
+    throw new Error((error as Error).message);
   }
 };
 
 export const signOut = async () => {
   try {
     await auth.signOut();
-  } catch (error: any) {
-    throw new Error(error.message);
+  } catch (error: unknown) {
+    throw new Error((error as Error).message);
   }
 };
 
 // Create or update user document (useful for Google sign-in)
-export const createOrUpdateUserDocument = async (user: any) => {
+export const createOrUpdateUserDocument = async (user: User) => {
   const userRef = doc(db, 'users', user.uid);
   const userSnapshot = await getDoc(userRef);
 

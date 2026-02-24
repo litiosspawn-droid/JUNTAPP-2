@@ -1,5 +1,5 @@
 import { collection, doc, setDoc, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from './client';
+import { db } from './firebase/client';
 
 // Sample data for development seeding
 export const sampleUsers = [
@@ -11,7 +11,7 @@ export const sampleUsers = [
     bio: 'Apasionada por la música y los eventos culturales.',
     location: 'Buenos Aires, Argentina',
     website: 'https://maria-garcia.dev',
-    eventsCreated: [],
+    eventsCreated: [] as string[],
     eventsAttending: [],
     banned: false,
     role: 'user',
@@ -26,7 +26,7 @@ export const sampleUsers = [
     bio: 'Organizador de eventos deportivos y amante del running.',
     location: 'Córdoba, Argentina',
     website: '',
-    eventsCreated: [],
+    eventsCreated: [] as string[],
     eventsAttending: [],
     banned: false,
     role: 'user',
@@ -41,7 +41,7 @@ export const sampleUsers = [
     bio: 'Chef profesional y organizadora de eventos gastronómicos.',
     location: 'Rosario, Argentina',
     website: 'https://ana-cocina.com',
-    eventsCreated: [],
+    eventsCreated: [] as string[],
     eventsAttending: [],
     banned: false,
     role: 'user',

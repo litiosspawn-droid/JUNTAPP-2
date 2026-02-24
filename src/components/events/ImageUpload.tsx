@@ -2,9 +2,22 @@
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
+interface CloudinaryResult {
+  event: string;
+  info: {
+    secure_url: string;
+  };
+}
+
+interface CloudinaryWidget {
+  createUploadWidget: (options: unknown, callback: (error: unknown, result: CloudinaryResult | undefined) => void) => {
+    open: () => void;
+  };
+}
+
 declare global {
   interface Window {
-    cloudinary: any;
+    cloudinary: CloudinaryWidget;
   }
 }
 
@@ -17,7 +30,7 @@ export default function ImageUpload({ onUpload }: ImageUploadProps) {
 
   const openWidget = () => {
     setUploading(true);
-    const widget = (window as any).cloudinary.createUploadWidget(
+    const widget = window.cloudinary.createUploadWidget(
       {
         cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
         uploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
@@ -45,7 +58,7 @@ export default function ImageUpload({ onUpload }: ImageUploadProps) {
           },
         },
       },
-      (error: any, result: any) => {
+      (error: unknown, result: CloudinaryResult | undefined) => {
         if (!error && result && result.event === 'success') {
           onUpload(result.info.secure_url);
           setUploading(false);
