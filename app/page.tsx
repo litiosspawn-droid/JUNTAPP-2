@@ -128,6 +128,16 @@ export default function HomePage() {
     return { totalEvents, upcomingEvents, totalAttendees }
   }, [events])
 
+  // Debug: verificar carga de eventos
+  useEffect(() => {
+    console.log('🏠 Homepage: Events loading status:', { loading, error, eventsCount: events.length })
+    console.log('🏠 Homepage: Events data:', events)
+
+    if (error) {
+      console.error('🏠 Homepage: Events error:', error)
+    }
+  }, [events, loading, error])
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
