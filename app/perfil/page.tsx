@@ -28,21 +28,37 @@ export default function ProfilePage() {
     const loadUserData = async () => {
       if (!user) return
 
+      console.log('🔍 Loading user profile for:', user.uid)
+
       try {
         const [profile, events] = await Promise.all([
           getUserProfile(user.uid),
           getEvents()
         ])
-        
+
+        console.log('✅ Profile data received:', profile ? 'EXISTS' : 'NULL')
+        console.log('✅ Profile details:', profile)
+
         setUserProfile(profile)
-        
+
         // Filter events created by this user
-        const userCreatedEvents = events.filter(event => 
+        const userCreatedEvents = events.filter(event =>
           event.createdBy === user.uid
         )
         setUserEvents(userCreatedEvents)
+
+        console.log('✅ User events loaded:', userCreatedEvents.length)
       } catch (error) {
-        console.error('Error loading user data:', error)
+        console.error('💥 Error loading user data:', error)
+
+        // Mostrar información detallada del error
+        if (error instanceof Error) {
+          console.error('Error name:', error.name)
+          console.error('Error message:', error.message)
+          console.error('Error stack:', error.stack)
+        }
+
+        alert(`Error al cargar el perfil: ${error instanceof Error ? error.message : 'Error desconocido'}`)
       } finally {
         setLoadingProfile(false)
       }
