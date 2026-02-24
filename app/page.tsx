@@ -120,7 +120,7 @@ export default function HomePage() {
   }, [hasRequestedLocation, userLocation, locationLoading, requestLocation])
 
   // Estadísticas
-  const stats = useMemo(() => {
+  const homepageStats = useMemo(() => {
     const totalEvents = events.length
     const upcomingEvents = events.filter(event => new Date(event.date) >= new Date()).length
     const totalAttendees = events.reduce((sum, event) => sum + (Number(event.attendees) || 0), 0)
@@ -172,15 +172,15 @@ export default function HomePage() {
                 {/* Estadísticas rápidas */}
                 <div className="grid grid-cols-3 gap-4 pt-8">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.upcomingEvents}</div>
+                    <div className="text-2xl font-bold text-primary">{homepageStats.upcomingEvents}</div>
                     <div className="text-sm text-muted-foreground">Próximos</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.totalEvents}</div>
+                    <div className="text-2xl font-bold text-primary">{homepageStats.totalEvents}</div>
                     <div className="text-sm text-muted-foreground">Total</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{stats.totalAttendees}</div>
+                    <div className="text-2xl font-bold text-primary">{homepageStats.totalAttendees}</div>
                     <div className="text-sm text-muted-foreground">Asistentes</div>
                   </div>
                 </div>
@@ -267,7 +267,7 @@ export default function HomePage() {
                 <div className="absolute -bottom-4 -left-4 bg-card rounded-lg p-4 shadow-lg border">
                   <div className="flex items-center gap-2 text-sm">
                     <TrendingUp className="h-4 w-4 text-green-500" />
-                    <span className="font-medium">{stats.upcomingEvents} eventos esta semana</span>
+                    <span className="font-medium">{homepageStats.upcomingEvents} eventos esta semana</span>
                   </div>
                 </div>
               </div>
