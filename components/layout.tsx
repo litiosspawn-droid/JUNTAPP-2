@@ -9,6 +9,7 @@ import { useState } from "react"
 import { useAuth } from '@/contexts/AuthContext'
 import { signInWithGoogle, logoutUser } from '@/lib/firebase/auth'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ThemeToggle } from '@/components/theme-toggle'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,6 +76,8 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
+
           <div className={`hidden items-center md:flex ${searchOpen ? "w-64" : "w-48"}`}>
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

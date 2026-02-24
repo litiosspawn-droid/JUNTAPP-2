@@ -11,6 +11,8 @@ import { Calendar, MapPin, Users, Clock, ArrowLeft } from "lucide-react"
 import { useAuth } from '@/contexts/AuthContext'
 import { getEvents, incrementAttendees, type Event } from '@/lib/firebase/events'
 import EventChat from '@/components/chat/EventChat'
+import { EventRatingForm } from '@/components/event-rating-form'
+import { EventRatingsDisplay } from '@/components/event-ratings-display'
 
 export default function EventDetailPage() {
   const params = useParams()
@@ -196,6 +198,21 @@ export default function EventDetailPage() {
                   )}
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Event Ratings and Reviews */}
+            <div className="space-y-6">
+              {/* Rating Form */}
+              <EventRatingForm
+                eventId={eventId}
+                onRatingSubmitted={() => {
+                  // Optionally refresh the ratings display
+                  window.location.reload()
+                }}
+              />
+
+              {/* Ratings Display */}
+              <EventRatingsDisplay eventId={eventId} />
             </div>
 
             {/* Sidebar */}

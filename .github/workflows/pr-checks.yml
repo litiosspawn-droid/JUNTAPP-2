@@ -1,0 +1,86 @@
+name: PR Quality Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Check PR size
+      run: |
+        # Check number of files changed
+        files_changed=$(git diff --name-only HEAD~1 | wc -l)
+        if [ "$files_changed" -gt 50 ]; then
+          echo "⚠️ Large PR: $files_changed files changed. Consider splitting into smaller PRs."
+        fi
+
+    - name: Check for console.logs
+      run: |
+        console_logs=$(grep -r "console\." --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" src/ components/ lib/ app/ | wc -l)
+        if [ "$console_logs" -gt 0 ]; then
+          echo "⚠️ Found $console_logs console.log statements. Please remove for production."
+        fi
+
+    - name: Check test coverage
+      run: |
+        pnpm test --coverage --watchAll=false
+        coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+        if (( $(echo "$coverage < 70" | bc -l) )); then
+          echo "⚠️ Test coverage is below 70%: $coverage%"
+          exit 1
+        fi
+
+    - name: Check bundle size
+      run: |
+        pnpm build
+        bundle_size=$(du -sh .next/static | cut -f1)
+        echo "📦 Bundle size: $bundle_size"
+
+  pr-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate PR title
+      run: |
+        title="${{ github.event.pull_request.title }}"
+        if [[ ! $title =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: ]]; then
+          echo "❌ PR title should follow conventional commits format:"
+          echo "   feat: add new feature"
+          echo "   fix: bug fix"
+          echo "   docs: documentation"
+          echo "   style: formatting"
+          echo "   refactor: code restructuring"
+          echo "   test: testing"
+          echo "   chore: maintenance"
+          exit 1
+        fi
+
+    - name: Check PR description
+      run: |
+        body="${{ github.event.pull_request.body }}"
+        if [ -z "$body" ]; then
+          echo "⚠️ PR description is empty. Please provide a description of changes."
+        fi

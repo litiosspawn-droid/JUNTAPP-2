@@ -4,16 +4,34 @@ import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import dynamic from "next/dynamic"
 import { Header, Footer } from "@/components/layout"
-import { EventCard } from "@/components/event-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CATEGORIES, CATEGORY_COLORS, type Category } from "@/lib/firebase/events"
-import { Music, Trophy, PartyPopper, Users, Sparkles, Search, MapPin, Calendar, Clock, Plus, TrendingUp, Users as UsersIcon, Calendar as CalendarIcon, Star, Palette, Cpu, UtensilsCrossed, GraduationCap, Heart, Gamepad2, Briefcase, Church, Home, MoreHorizontal } from "lucide-react"
 import { useEvents } from '@/hooks/use-events'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGeolocation } from '@/hooks/use-geolocation'
+import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar as CalendarIcon, Star, Search } from 'lucide-react'
+
+// Lazy load heavy components
+const EventCard = dynamic(() => import("@/components/event-card").then((mod) => mod.EventCard), {
+  loading: () => (
+    <Card className="overflow-hidden">
+      <div className="aspect-[16/10] bg-muted animate-pulse" />
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          <div className="h-4 bg-muted rounded animate-pulse" />
+          <div className="h-3 bg-muted rounded w-3/4 animate-pulse" />
+          <div className="flex gap-2">
+            <div className="h-6 w-16 bg-muted rounded-full animate-pulse" />
+            <div className="h-6 w-20 bg-muted rounded-full animate-pulse" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  ),
+})
 
 const MapView = dynamic(() => import("@/components/map-view").then((mod) => mod.MapView), {
   ssr: false,
@@ -22,21 +40,22 @@ const MapView = dynamic(() => import("@/components/map-view").then((mod) => mod.
   ),
 })
 
-const CATEGORY_ICON_MAP: Record<Category, React.ReactNode> = {
-  "Música": <Music className="h-4 w-4" />,
-  "Deporte": <Trophy className="h-4 w-4" />,
-  "After": <PartyPopper className="h-4 w-4" />,
-  "Reunión": <Users className="h-4 w-4" />,
-  "Arte & Cultura": <Palette className="h-4 w-4" />,
-  "Tecnología": <Cpu className="h-4 w-4" />,
-  "Gastronomía": <UtensilsCrossed className="h-4 w-4" />,
-  "Educación": <GraduationCap className="h-4 w-4" />,
-  "Bienestar": <Heart className="h-4 w-4" />,
-  "Entretenimiento": <Gamepad2 className="h-4 w-4" />,
-  "Negocios": <Briefcase className="h-4 w-4" />,
-  "Religión": <Church className="h-4 w-4" />,
-  "Familia": <Home className="h-4 w-4" />,
-  "Otros": <MoreHorizontal className="h-4 w-4" />,
+// Lazy load icon components
+const CATEGORY_ICON_MAP: Record<Category, React.ComponentType<{ className?: string }>> = {
+  "Música": dynamic(() => import("lucide-react").then(mod => mod.Music)),
+  "Deporte": dynamic(() => import("lucide-react").then(mod => mod.Trophy)),
+  "After": dynamic(() => import("lucide-react").then(mod => mod.PartyPopper)),
+  "Reunión": dynamic(() => import("lucide-react").then(mod => mod.Users)),
+  "Arte & Cultura": dynamic(() => import("lucide-react").then(mod => mod.Palette)),
+  "Tecnología": dynamic(() => import("lucide-react").then(mod => mod.Cpu)),
+  "Gastronomía": dynamic(() => import("lucide-react").then(mod => mod.UtensilsCrossed)),
+  "Educación": dynamic(() => import("lucide-react").then(mod => mod.GraduationCap)),
+  "Bienestar": dynamic(() => import("lucide-react").then(mod => mod.Heart)),
+  "Entretenimiento": dynamic(() => import("lucide-react").then(mod => mod.Gamepad2)),
+  "Negocios": dynamic(() => import("lucide-react").then(mod => mod.Briefcase)),
+  "Religión": dynamic(() => import("lucide-react").then(mod => mod.Church)),
+  "Familia": dynamic(() => import("lucide-react").then(mod => mod.Home)),
+  "Otros": dynamic(() => import("lucide-react").then(mod => mod.MoreHorizontal)),
 }
 
 export default function HomePage() {
@@ -218,19 +237,22 @@ export default function HomePage() {
                   <Sparkles className="h-4 w-4" />
                   Todos
                 </Button>
-                {CATEGORIES.map((cat) => (
-                  <Button
-                    key={cat}
-                    variant={activeFilter === cat ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActiveFilter(activeFilter === cat ? null : cat)}
-                    className="gap-2 shrink-0"
-                    disabled={loading}
-                  >
-                    {CATEGORY_ICON_MAP[cat]}
-                    {cat}
-                  </Button>
-                ))}
+                {CATEGORIES.map((cat) => {
+                  const IconComponent = CATEGORY_ICON_MAP[cat]
+                  return (
+                    <Button
+                      key={cat}
+                      variant={activeFilter === cat ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setActiveFilter(activeFilter === cat ? null : cat)}
+                      className="gap-2 shrink-0"
+                      disabled={loading}
+                    >
+                      <IconComponent className="h-4 w-4" />
+                      {cat}
+                    </Button>
+                  )
+                })}
               </div>
             </div>
           </div>

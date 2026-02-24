@@ -1,35 +1,44 @@
 'use client';
 import { useState } from 'react';
-import { auth } from '@/lib/firebase/client';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { signInWithGoogle } from '@/lib/firebase/auth';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { login, loginWithGoogle } = useAuth();
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await login(email, password);
       router.push('/'); // redirige a inicio
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Error al iniciar sesión');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setError('');
+    setIsLoading(true);
+
     try {
-      await signInWithGoogle();
+      await loginWithGoogle();
       router.push('/');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Error al iniciar sesión con Google');
+      setIsLoading(false);
     }
   };
 
@@ -57,7 +66,9 @@ export default function LoginPage() {
               required
             />
             {error && <p className="text-red-500 text-sm">{error}</p>}
-            <Button type="submit" className="w-full">Entrar con email</Button>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? 'Iniciando sesión...' : 'Entrar con email'}
+            </Button>
           </form>
           <div className="relative my-4">
             <div className="absolute inset-0 flex items-center">

@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button"
 import { CATEGORY_COLORS, type Event } from "@/lib/firebase/events"
 import { useAuth } from '@/contexts/AuthContext'
 import { deleteEvent } from '@/lib/firebase/events'
-import { useState } from 'react'
+import { useState, memo } from 'react'
 
-export function EventCard({ event, onDelete }: { event: Event; onDelete?: () => void }) {
+export const EventCard = memo(function EventCard({ event, onDelete }: { event: Event; onDelete?: () => void }) {
   const { user } = useAuth()
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -19,8 +19,8 @@ export function EventCard({ event, onDelete }: { event: Event; onDelete?: () => 
     e.preventDefault() // Evitar navegación al enlace
     e.stopPropagation() // Evitar bubbling
 
-    if (!user) {
-      alert('Debes iniciar sesión para eliminar eventos')
+    if (!user || !user.uid) {
+      alert('Error: Usuario no válido')
       return
     }
 
@@ -28,7 +28,10 @@ export function EventCard({ event, onDelete }: { event: Event; onDelete?: () => 
       `¿Estás seguro de que quieres eliminar el evento "${event.title}"? Esta acción no se puede deshacer.`
     )
 
-    if (!confirmDelete) return
+    if (!event.id) {
+      alert('Error: Evento sin ID válido')
+      return
+    }
 
     try {
       setIsDeleting(true)
@@ -43,64 +46,118 @@ export function EventCard({ event, onDelete }: { event: Event; onDelete?: () => 
     }
   }
 
-  const isOwner = user && event.creatorId === user.uid
+  const isOwner = user && event.createdBy === user.uid
 
   return (
-    <div className="relative">
-      <Link href={`/evento/${event.id}`}>
-        <Card className="group overflow-hidden border-border transition-all hover:shadow-lg hover:-translate-y-1 py-0">
-        <div className="relative aspect-[16/10] overflow-hidden">
-          <Image
-            src={event.flyerUrl || '/images/placeholder-event.jpg'}
-            alt={event.title}
-            fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-          />
+    <Link
+      href={`/evento/${event.id}`}
+      className="block group overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      aria-label={`Ver detalles del evento: ${event.title}`}
+    >
+      <article className="relative">
+        <div className="aspect-[16/10] bg-muted relative overflow-hidden">
+          {event.flyerUrl ? (
+            <Image
+              src={event.flyerUrl}
+              alt={`Imagen promocional del evento: ${event.title}`}
+              fill
+              className="object-cover transition-transform group-hover:scale-105"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+              <Calendar className="h-12 w-12 text-muted-foreground" aria-hidden="true" />
+            </div>
+          )}
+
+          {/* Category Badge */}
           <div className="absolute top-3 left-3">
-            <Badge className={CATEGORY_COLORS[event.category]}>
+            <Badge
+              className={CATEGORY_COLORS[event.category]}
+              variant="secondary"
+              aria-label={`Categoría: ${event.category}`}
+            >
               {event.category}
             </Badge>
           </div>
+
+          {/* Delete Button - Only for creator */}
           {isOwner && (
             <div className="absolute top-3 right-3">
               <Button
                 variant="destructive"
                 size="sm"
-                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
                 onClick={handleDelete}
                 disabled={isDeleting}
+                aria-label={`Eliminar evento: ${event.title}`}
+                title={`Eliminar evento: ${event.title}`}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
             </div>
           )}
         </div>
-        <CardContent className="p-4">
-          <h3 className="mb-2 text-base font-semibold leading-tight text-foreground text-pretty line-clamp-2">
-            {event.title}
-          </h3>
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5 shrink-0" />
-              <span>
-                {new Date(event.date).toLocaleDateString("es-AR", {
-                  day: "numeric",
-                  month: "short",
-                })} - {event.time}hs
-              </span>
+
+        <div className="p-4">
+          <div className="space-y-3">
+            {/* Event Title */}
+            <h3 className="font-semibold text-lg leading-tight line-clamp-2" id={`event-title-${event.id}`}>
+              {event.title}
+            </h3>
+
+            {/* Event Description */}
+            <p className="text-sm text-muted-foreground line-clamp-2" aria-describedby={`event-title-${event.id}`}>
+              {event.description}
+            </p>
+
+            {/* Event Details */}
+            <div className="space-y-2 text-sm text-muted-foreground">
+              {/* Date and Time */}
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <time dateTime={`${event.date}T${event.time}`}>
+                  {new Date(event.date).toLocaleDateString('es-ES', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short'
+                  })} • {event.time}
+                </time>
+              </div>
+
+              {/* Location */}
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <address className="not-italic truncate">
+                  {event.address}
+                </address>
+              </div>
+
+              {/* Attendees */}
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{Number(event.attendees || 0).toString()} asistentes</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{event.address}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Users className="h-3.5 w-3.5 shrink-0" />
-              <span>{Number(event.attendees || 0).toString()} asistentes</span>
-            </div>
+
+            {/* Tags */}
+            {event.tags && Array.isArray(event.tags) && event.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {event.tags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="outline"
+                    className="text-xs"
+                    aria-label={`Etiqueta: ${tag}`}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </article>
     </Link>
-    </div>
   )
-}
+})

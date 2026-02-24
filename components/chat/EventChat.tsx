@@ -7,10 +7,19 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { SmilePlus, Flag, Lock, MessageCircle } from 'lucide-react'
+import { ScrollArea } from '../ui/scroll-area'
+import { Lock as LockIcon, MessageCircle as MessageCircleIcon, Flag as FlagIcon, SmilePlus as SmilePlusIcon } from 'lucide-react'
 
-const EMOJIS = ['👍', '❤️', '😂', '🎉', '🔥', '👏', '🙌', '💯']
+const EMOJIS: string[] = [
+  '\u{1F44D}', // thumbs up
+  '\u{2764}',  // red heart
+  '\u{1F602}', // face with tears of joy
+  '\u{1F389}', // party popper
+  '\u{1F525}', // fire
+  '\u{1F44F}', // clapping hands
+  '\u{1F64C}', // raising hands
+  '\u{1F4AF}'  // hundred points
+]
 
 interface Message {
   id: string
@@ -19,7 +28,10 @@ interface Message {
   userPhoto?: string
   text: string
   timestamp: Timestamp
-  reactions?: Array<{ emoji: string; userId: string }>
+  reactions?: Array<{
+    emoji: string
+    userId: string
+  }>
   reported?: boolean
   reportedBy?: string[]
 }
@@ -48,124 +60,101 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
   // Verificar si el chat ha expirado
   useEffect(() => {
     if (chatExpiration) {
-      const expirationDate = chatExpiration.toDate()
-      setIsExpired(new Date() > expirationDate)
+      const now = Timestamp.now()
+      setIsExpired(chatExpiration.toMillis() < now.toMillis())
     }
   }, [chatExpiration])
 
-  // Cargar mensajes en tiempo real
+  // Cargar mensajes del chat
   useEffect(() => {
-    if (!canAccessChat) {
-      setLoading(false)
-      return
-    }
+    if (!eventId || !canAccessChat) return
 
-    const q = query(
-      collection(db, `events/${eventId}/messages`),
+    setLoading(true)
+    const messagesQuery = query(
+      collection(db, 'events', eventId, 'messages'),
       orderBy('timestamp', 'asc')
     )
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map((doc) => ({
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      const messagesData: Message[] = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data(),
+        ...doc.data()
       })) as Message[]
-      setMessages(msgs)
+
+      setMessages(messagesData)
       setLoading(false)
     })
 
-    return unsubscribe
+    return () => unsubscribe()
   }, [eventId, canAccessChat])
 
-  // Scroll automático al final
+  // Auto-scroll al último mensaje
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Enviar mensaje
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !newMessage.trim() || isExpired || !canAccessChat) return
+    if (!newMessage.trim() || !user || isExpired) return
 
     try {
-      await addDoc(collection(db, `events/${eventId}/messages`), {
+      await addDoc(collection(db, 'events', eventId, 'messages'), {
         userId: user.uid,
         userName: user.displayName || 'Usuario',
-        userPhoto: user.photoURL || '',
+        userPhoto: user.photoURL,
         text: newMessage.trim(),
         timestamp: serverTimestamp(),
         reactions: [],
         reported: false,
         reportedBy: []
       })
+
       setNewMessage('')
     } catch (error) {
       console.error('Error sending message:', error)
     }
   }
 
+  // Reaccionar a mensaje
   const handleReaction = async (messageId: string, emoji: string) => {
-    if (!user || isExpired || !canAccessChat) return
-
-    const messageRef = doc(db, `events/${eventId}/messages`, messageId)
-    const message = messages.find(m => m.id === messageId)
-    const hasReacted = message?.reactions?.some(r => r.emoji === emoji && r.userId === user.uid)
+    if (!user) return
 
     try {
-      if (hasReacted) {
-        // Quitar reacción
+      const messageRef = doc(db, 'events', eventId, 'messages', messageId)
+      const message = messages.find(m => m.id === messageId)
+      if (!message) return
+
+      const existingReaction = message.reactions?.find(r => r.emoji === emoji && r.userId === user.uid)
+
+      if (existingReaction) {
+        // Remover reacción
         await updateDoc(messageRef, {
-          reactions: arrayRemove({ emoji, userId: user.uid })
+          reactions: arrayRemove(existingReaction)
         })
       } else {
-        // Añadir reacción
+        // Agregar reacción
         await updateDoc(messageRef, {
           reactions: arrayUnion({ emoji, userId: user.uid })
         })
       }
     } catch (error) {
-      console.error('Error updating reaction:', error)
+      console.error('Error handling reaction:', error)
     }
   }
 
+  // Reportar mensaje
   const handleReport = async (messageId: string) => {
-    if (!user || !canAccessChat) return
-
-    const confirmReport = window.confirm(
-      '¿Estás seguro de que quieres reportar este mensaje? Los administradores lo revisarán.'
-    )
-
-    if (!confirmReport) return
+    if (!user) return
 
     try {
-      const messageRef = doc(db, `events/${eventId}/messages`, messageId)
+      const messageRef = doc(db, 'events', eventId, 'messages', messageId)
       await updateDoc(messageRef, {
         reported: true,
         reportedBy: arrayUnion(user.uid)
       })
-      alert('Mensaje reportado exitosamente')
     } catch (error) {
       console.error('Error reporting message:', error)
-      alert('Error al reportar el mensaje')
-    }
-  }
-
-  const formatTimestamp = (timestamp: Timestamp) => {
-    const date = timestamp.toDate()
-    const now = new Date()
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString('es-AR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    } else {
-      return date.toLocaleDateString('es-AR', {
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
     }
   }
 
@@ -175,7 +164,7 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
       <div className="flex flex-col h-64 border rounded-lg overflow-hidden bg-muted/50">
         <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center">
-            <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <LockIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <h3 className="text-lg font-semibold mb-2">Chat privado</h3>
             <p className="text-muted-foreground">
               Solo los asistentes al evento pueden ver y participar en el chat.
@@ -206,7 +195,7 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
       <div className="border-b bg-card px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageCircle className="h-4 w-4" />
+            <MessageCircleIcon className="h-4 w-4" />
             <span className="font-medium">Chat del evento</span>
             {messages.length > 0 && (
               <span className="text-xs text-muted-foreground">
@@ -234,14 +223,22 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
                     {msg.userName.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col">
-                  <div className={`p-3 rounded-lg ${msg.userId === user?.uid ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium">{msg.userName}</span>
-                      <span className="text-xs opacity-70">
-                        {formatTimestamp(msg.timestamp)}
-                      </span>
-                    </div>
+
+                <div className={`flex flex-col ${msg.userId === user?.uid ? 'items-end' : 'items-start'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-muted-foreground">
+                      {msg.userName}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {msg.timestamp?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+
+                  <div className={`rounded-lg px-3 py-2 max-w-xs break-words ${
+                    msg.userId === user?.uid
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  }`}>
                     <p className="text-sm">{msg.text}</p>
                     {msg.reported && (
                       <p className="text-xs text-orange-600 mt-1">[Reportado]</p>
@@ -258,7 +255,7 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
                           key={emoji}
                           variant="ghost"
                           size="sm"
-                          className={`h-6 px-1 text-xs ${userReacted ? 'bg-accent' : ''}`}
+                          className={`h-6 px-1 text-xs ${userReacted ? 'bg-blue-100' : ''}`}
                           onClick={() => handleReaction(msg.id, emoji)}
                           disabled={isExpired}
                         >
@@ -266,20 +263,20 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
                         </Button>
                       )
                     })}
-
-                    {/* Report button */}
-                    {user && msg.userId !== user.uid && !msg.reported && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-1 text-xs"
-                        onClick={() => handleReport(msg.id)}
-                        disabled={isExpired}
-                      >
-                        <Flag className="h-3 w-3" />
-                      </Button>
-                    )}
                   </div>
+
+                  {/* Report button */}
+                  {user && msg.userId !== user.uid && !msg.reported && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-1 text-xs"
+                      onClick={() => handleReport(msg.id)}
+                      disabled={isExpired}
+                    >
+                      <FlagIcon className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
