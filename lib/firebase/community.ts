@@ -31,31 +31,14 @@ export async function getAllUsers() {
   }
 }
 
-// Get all events (for community page)
+// Get all events (for community page) - using same function as homepage
 export async function getAllEvents() {
   try {
     console.log('📅 Fetching all events for community...');
 
-    const eventsQuery = query(
-      collection(db, 'events'),
-      orderBy('createdAt', 'desc')
-    );
-
-    const eventsSnapshot = await getDocs(eventsQuery);
-    const events: Event[] = eventsSnapshot.docs.map(doc => {
-      const eventData = doc.data();
-      return {
-        id: doc.id,
-        ...eventData,
-        createdAt: eventData.createdAt?.toDate(),
-        updatedAt: eventData.updatedAt?.toDate(),
-        // Ensure location is properly formatted
-        location: eventData.location || {
-          latitude: eventData.lat || 0,
-          longitude: eventData.lng || 0,
-        },
-      } as Event;
-    });
+    // Import and use the same getEvents function as homepage
+    const { getEvents } = await import('./events');
+    const events = await getEvents();
 
     console.log(`✅ Found ${events.length} events in community`);
     return events;

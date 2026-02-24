@@ -355,23 +355,39 @@ export default function HomePage() {
               <div className="grid gap-6 md:grid-cols-3">
                 {featuredEvents.map((event, index) => (
                   <Card key={event.id} className={`group cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 ${index === 0 ? 'md:col-span-2' : ''}`}>
-                    <div className={`relative ${index === 0 ? 'aspect-[16/9]' : 'aspect-[4/3]'} overflow-hidden rounded-t-lg`}>
-                      <img
-                        src={event.flyerUrl}
-                        alt={event.title}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      <div className="absolute top-3 left-3">
-                        <Badge className="bg-white/90 text-foreground hover:bg-white">
-                          {event.category}
-                        </Badge>
+                    {event.flyerUrl ? (
+                      <div className={`relative ${index === 0 ? 'aspect-[16/9]' : 'aspect-[4/3]'} overflow-hidden rounded-t-lg`}>
+                        <img
+                          src={event.flyerUrl}
+                          alt={event.title}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute top-3 left-3">
+                          <Badge className="bg-white/90 text-foreground hover:bg-white">
+                            {event.category}
+                          </Badge>
+                        </div>
+                        <div className="absolute top-3 right-3">
+                          <Badge variant="secondary" className="bg-black/50 text-white border-0">
+                            Próximo
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="absolute top-3 right-3">
-                        <Badge variant="secondary" className="bg-black/50 text-white border-0">
-                          Próximo
-                        </Badge>
+                    ) : (
+                      <div className={`relative ${index === 0 ? 'aspect-[16/9]' : 'aspect-[4/3]'} overflow-hidden rounded-t-lg bg-gradient-to-br from-primary/10 via-primary/5 to-secondary/10 border-b`}>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                          <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${CATEGORY_COLORS[event.category] ? CATEGORY_COLORS[event.category].replace('bg-', 'bg-').replace('text-', 'text-') : 'bg-primary/20 text-primary'}`}>
+                            <MapPin className="h-8 w-8" />
+                          </div>
+                          <Badge className="bg-white/90 text-foreground hover:bg-white mb-2">
+                            {event.category}
+                          </Badge>
+                          <Badge variant="secondary" className="bg-black/50 text-white border-0">
+                            Próximo
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
+                    )}
                     <CardContent className="p-4">
                       <h3 className="font-semibold text-lg mb-2 line-clamp-2">{event.title}</h3>
                       <div className="space-y-2 text-sm text-muted-foreground">
