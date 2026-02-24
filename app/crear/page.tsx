@@ -522,8 +522,8 @@ export default function CreateEventPage() {
                         zoom={15}
                         className="h-full w-full"
                         onMapClick={(latlng) => {
-                          handleInputChange('lat', latlng.lat.toString())
-                          handleInputChange('lng', latlng.lng.toString())
+                          handleInputChange('lat', latlng.lat)
+                          handleInputChange('lng', latlng.lng)
                         }}
                         selectedLocation={formData.lat && formData.lng ? [formData.lat, formData.lng] : undefined}
                       />
