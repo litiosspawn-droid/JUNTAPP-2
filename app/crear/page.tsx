@@ -526,6 +526,7 @@ export default function CreateEventPage() {
                           handleInputChange('lng', latlng.lng)
                         }}
                         selectedLocation={formData.lat && formData.lng ? [formData.lat, formData.lng] : undefined}
+                        showUserLocation={false}
                       />
                     </div>
                     {formData.lat && formData.lng && (
