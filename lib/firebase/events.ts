@@ -1,6 +1,6 @@
 import { collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, where, Timestamp, getDoc, increment } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from './client';
+import { db } from './client';
+import { uploadToCloudinary } from '../cloudinary';
 
 export type Category =
   | "Música"
@@ -166,12 +166,14 @@ export const createEvent = async (eventData: Omit<Event, 'id' | 'createdAt' | 'u
     
     // Subir la imagen si se proporcionó un archivo
     if (flyerFile) {
-      console.log('📤 Uploading flyer file...');
-      const storageRef = ref(storage, `events/${Date.now()}-${flyerFile.name}`);
-      const uploadResult = await uploadBytes(storageRef, flyerFile);
-      console.log('✅ File uploaded successfully');
-      flyerUrl = await getDownloadURL(storageRef);
-      console.log('✅ File URL obtained:', flyerUrl);
+      console.log('📤 Uploading flyer file to Cloudinary...');
+      try {
+        flyerUrl = await uploadToCloudinary(flyerFile, 'events');
+        console.log('✅ File uploaded successfully to Cloudinary:', flyerUrl);
+      } catch (uploadError) {
+        console.error('❌ ERROR: Failed to upload to Cloudinary:', uploadError);
+        throw new Error('No se pudo subir la imagen del flyer. Inténtalo de nuevo.');
+      }
     }
 
     // Crear evento con SOLO los campos requeridos por las reglas de Firestore
