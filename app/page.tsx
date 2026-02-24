@@ -13,6 +13,7 @@ import { useEvents } from '@/hooks/use-events'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGeolocation } from '@/hooks/use-geolocation'
 import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar, Star, Search } from 'lucide-react'
+import { ErrorBoundary } from '@/components/error-boundary'
 
 // Lazy load heavy components
 const EventCard = dynamic(() => import("@/components/event-card").then((mod) => mod.EventCard), {
@@ -36,7 +37,12 @@ const EventCard = dynamic(() => import("@/components/event-card").then((mod) => 
 const MapView = dynamic(() => import("@/components/map-view").then((mod) => mod.MapView), {
   ssr: false,
   loading: () => (
-    <div className="h-64 w-full animate-pulse rounded-lg bg-muted" />
+    <div className="h-full w-full bg-muted flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+        <p className="text-sm text-muted-foreground">Cargando mapa...</p>
+      </div>
+    </div>
   ),
 })
 
@@ -101,6 +107,27 @@ export default function HomePage() {
     return { totalEvents, upcomingEvents, totalAttendees, categories }
   }, [events])
 
+  // Estado para controlar si hemos intentado obtener ubicación
+  const [hasRequestedLocation, setHasRequestedLocation] = useState(false)
+
+  // Solicitar ubicación automáticamente al cargar la página
+  useEffect(() => {
+    if (!hasRequestedLocation && !userLocation && !locationLoading) {
+      console.log('Homepage: Requesting user location')
+      requestLocation()
+      setHasRequestedLocation(true)
+    }
+  }, [hasRequestedLocation, userLocation, locationLoading, requestLocation])
+
+  // Estadísticas
+  const stats = useMemo(() => {
+    const totalEvents = events.length
+    const upcomingEvents = events.filter(event => new Date(event.date) >= new Date()).length
+    const totalAttendees = events.reduce((sum, event) => sum + (Number(event.attendees) || 0), 0)
+
+    return { totalEvents, upcomingEvents, totalAttendees }
+  }, [events])
+
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header />
@@ -159,36 +186,84 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Map Preview */}
+              {/* Map Preview - SIEMPRE VISIBLE */}
               <div className="relative">
                 <div className="relative h-80 md:h-96 rounded-xl overflow-hidden shadow-2xl">
-                  {featuredEvents.length > 0 ? (
-                    <MapView
-                      key={`hero-map-${featuredEvents.length}-${featuredEvents[0]?.id || 'empty'}`}
-                      events={featuredEvents}
-                      center={userLocation || [-34.6037, -58.3816]}
-                      zoom={userLocation ? 15 : 13}
-                      className="h-full w-full"
-                    />
-                  ) : (
-                    <div className="h-full w-full bg-muted flex items-center justify-center">
-                      <div className="text-center text-muted-foreground">
-                        <MapPin className="h-8 w-8 mx-auto mb-2" />
-                        <p>Cargando mapa...</p>
-                        {locationLoading && <p className="text-sm">Obteniendo tu ubicación...</p>}
-                        {locationError && (
-                          <div className="mt-2">
-                            <p className="text-sm text-yellow-600 mb-2">{locationError}</p>
-                            <Button variant="outline" size="sm" onClick={requestLocation}>
-                              Reintentar
+                  <ErrorBoundary
+                    fallback={
+                      <div className="h-full w-full bg-muted flex items-center justify-center">
+                        <div className="text-center p-6">
+                          <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">Mapa no disponible</h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            El mapa no se pudo cargar. Esto puede deberse a restricciones de seguridad del navegador.
+                          </p>
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">
+                              Intenta recargar la página o verifica tu conexión a internet.
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.location.reload()}
+                              className="text-xs"
+                            >
+                              Recargar página
                             </Button>
                           </div>
-                        )}
+                        </div>
+                      </div>
+                    }
+                  >
+                    <MapView
+                      key={`homepage-map-${userLocation ? 'located' : 'default'}-${featuredEvents.length}`}
+                      events={featuredEvents}
+                      center={userLocation || [-34.6037, -58.3816]}
+                      zoom={userLocation ? 13 : 11}
+                      className="h-full w-full"
+                      showUserLocation={true}
+                      userLocation={userLocation}
+                    />
+                  </ErrorBoundary>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+                </div>
+
+                {/* Indicador de ubicación */}
+                <div className="absolute top-4 right-4 flex flex-col gap-2">
+                  {locationLoading && (
+                    <div className="bg-white/90 text-foreground px-3 py-2 rounded-lg shadow-lg flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                      <span className="text-sm font-medium">Obteniendo ubicación...</span>
+                    </div>
+                  )}
+
+                  {locationError && (
+                    <div className="bg-red-50 text-red-700 px-3 py-2 rounded-lg shadow-lg">
+                      <p className="text-sm font-medium mb-1">Error de ubicación</p>
+                      <p className="text-xs">{locationError}</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 h-6 text-xs"
+                        onClick={() => {
+                          setHasRequestedLocation(false)
+                        }}
+                      >
+                        Reintentar
+                      </Button>
+                    </div>
+                  )}
+
+                  {userLocation && (
+                    <div className="bg-green-50 text-green-700 px-3 py-2 rounded-lg shadow-lg">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        <span className="text-sm font-medium">Ubicación detectada</span>
                       </div>
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                 </div>
+
                 <div className="absolute -bottom-4 -left-4 bg-card rounded-lg p-4 shadow-lg border">
                   <div className="flex items-center gap-2 text-sm">
                     <TrendingUp className="h-4 w-4 text-green-500" />

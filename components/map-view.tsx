@@ -56,8 +56,27 @@ export function MapView({
   useEffect(() => {
     console.log('MapView: Initializing map', { center, zoom, eventsCount: events.length })
 
+    // Añadir timeout para evitar que se quede cargando indefinidamente
+    const initTimeout = setTimeout(() => {
+      console.warn('MapView: Initialization timeout - forcing error state')
+      setMapError('Timeout al cargar el mapa')
+      setIsMapLoading(false)
+    }, 15000) // 15 segundos de timeout
+
     if (!mapRef.current) {
       console.error('MapView: mapRef.current is null')
+      setMapError('Contenedor del mapa no encontrado')
+      setIsMapLoading(false)
+      clearTimeout(initTimeout)
+      return
+    }
+
+    // Verificar que Leaflet esté disponible
+    if (typeof L === 'undefined') {
+      console.error('MapView: Leaflet library not loaded')
+      setMapError('Biblioteca de mapas no cargada')
+      setIsMapLoading(false)
+      clearTimeout(initTimeout)
       return
     }
 
@@ -77,11 +96,26 @@ export function MapView({
         keyboard: interactive,
         dragging: interactive,
         zoomControl: interactive,
+        // Añadir opciones para mejor compatibilidad
+        fadeAnimation: true,
+        zoomAnimation: true,
+        markerZoomAnimation: true,
+      })
+
+      // Añadir event listener para cuando el mapa esté listo
+      map.whenReady(() => {
+        console.log('MapView: Map is ready')
+        clearTimeout(initTimeout)
+        setIsMapLoading(false)
+        setMapError(null)
       })
 
       console.log('MapView: Adding tile layer')
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19,
+        // Añadir opciones para mejor carga
+        errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
       }).addTo(map)
 
       // Agregar funcionalidad de clic en mapa
