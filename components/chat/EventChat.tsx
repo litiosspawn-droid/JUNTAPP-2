@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '../ui/scroll-area'
-import { Lock as LockIcon, MessageCircle as MessageCircleIcon, Flag as FlagIcon, SmilePlus as SmilePlusIcon, ChevronUp } from 'lucide-react'
+import { Lock as LockIcon, MessageCircle as MessageCircleIcon, Flag as FlagIcon, SmilePlus as SmilePlusIcon, ChevronUp, MapPin } from 'lucide-react'
 
 const EMOJIS: string[] = [
   '\u{1F44D}', // thumbs up

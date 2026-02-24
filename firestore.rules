@@ -39,9 +39,9 @@ service cloud.firestore {
     // Events collection
     match /events/{eventId} {
       allow read: if true; // Permitir lectura pública para que aparezcan en homepage
-      allow create: if true; // TEMPORAL: Permitir creación para diagnosticar
+      allow create: if isAuthenticated() && isNotBanned(); // Permitir creación a todos los usuarios registrados y no baneados
       allow update: if request.auth != null && request.auth.uid == resource.data.createdBy;
-      allow delete: if request.auth != null && request.auth.uid == resource.data.createdBy;
+      allow delete: if request.auth != null && request.auth.uid == resource.data.createdBy; // Solo el creador puede eliminar
     }
     
     // Chats collection

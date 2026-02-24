@@ -87,7 +87,9 @@ export default function CreateEventPage() {
   // Redirigir si no hay usuario autenticado
   useEffect(() => {
     if (!user && !loading) {
-      router.push('/')
+      // Mostrar mensaje y redirigir a login
+      alert('Debes iniciar sesión para crear un evento')
+      router.push('/login')
     }
   }, [user, loading, router])
 
@@ -294,6 +296,46 @@ export default function CreateEventPage() {
     if (formData.description.length >= 10) completed++
 
     return Math.round((completed / total) * 100)
+  }
+
+  // Si no hay usuario autenticado, mostrar mensaje de acceso denegado
+  if (!user && !loading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <Card className="w-full max-w-md">
+            <CardContent className="p-6 text-center">
+              <div className="mb-4">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="h-8 w-8 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold mb-2">Acceso Requerido</h2>
+                <p className="text-muted-foreground mb-6">
+                  Debes iniciar sesión para crear un evento en JuntApp
+                </p>
+              </div>
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => router.push('/login')}
+                  className="w-full"
+                >
+                  Iniciar Sesión
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => router.push('/')}
+                  className="w-full"
+                >
+                  Volver al Inicio
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    )
   }
 
   return (
