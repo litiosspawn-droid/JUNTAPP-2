@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Upload, AlertCircle, CheckCircle, User } from 'lucide-react'
 import type { UserProfile } from '@/lib/firebase/auth'
+import { ProfilePhotoUpload } from '@/components/profile-photo-upload'
 
 export default function EditProfilePage() {
   const { user } = useAuth()
@@ -41,7 +42,7 @@ export default function EditProfilePage() {
       try {
         const userDoc = await getDoc(doc(db, 'users', user.uid))
         if (userDoc.exists()) {
-          const userData = { id: userDoc.id, ...userDoc.data() } as UserProfile
+          const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile
           setProfile(userData)
           setFormData({
             displayName: userData.displayName || '',
@@ -94,6 +95,7 @@ export default function EditProfilePage() {
         bio: formData.bio.trim(),
         location: formData.location.trim(),
         website: formData.website.trim(),
+        photoURL: profile?.photoURL,
         updatedAt: new Date()
       })
 
@@ -216,6 +218,19 @@ export default function EditProfilePage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Profile Photo */}
+                <div className="space-y-2">
+                  <Label>Foto de perfil</Label>
+                  <ProfilePhotoUpload
+                    currentPhotoURL={profile?.photoURL}
+                    displayName={formData.displayName}
+                    onPhotoUpdate={(photoURL) => {
+                      setProfile(prev => prev ? { ...prev, photoURL: photoURL || undefined } : null)
+                    }}
+                    userId={user.uid}
+                  />
+                </div>
+
                 {/* Display Name */}
                 <div className="space-y-2">
                   <Label htmlFor="displayName" className="flex items-center gap-2">

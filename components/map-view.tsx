@@ -50,35 +50,47 @@ export function MapView({
 }: MapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
+  const [mapError, setMapError] = useState<string | null>(null)
+  const [isMapLoading, setIsMapLoading] = useState(true)
 
   useEffect(() => {
-    if (!mapRef.current) return
+    console.log('MapView: Initializing map', { center, zoom, eventsCount: events.length })
 
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove()
+    if (!mapRef.current) {
+      console.error('MapView: mapRef.current is null')
+      return
     }
 
-    const map = L.map(mapRef.current, {
-      center,
-      zoom,
-      scrollWheelZoom: interactive,
-      doubleClickZoom: interactive,
-      boxZoom: interactive,
-      keyboard: interactive,
-      dragging: interactive,
-      zoomControl: interactive,
-    })
+    try {
+      if (mapInstanceRef.current) {
+        console.log('MapView: Removing existing map instance')
+        mapInstanceRef.current.remove()
+      }
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map)
-
-    // Agregar funcionalidad de clic en mapa
-    if (onMapClick && interactive) {
-      map.on('click', (e: L.LeafletMouseEvent) => {
-        onMapClick({ lat: e.latlng.lat, lng: e.latlng.lng })
+      console.log('MapView: Creating new map instance')
+      const map = L.map(mapRef.current, {
+        center,
+        zoom,
+        scrollWheelZoom: interactive,
+        doubleClickZoom: interactive,
+        boxZoom: interactive,
+        keyboard: interactive,
+        dragging: interactive,
+        zoomControl: interactive,
       })
-    }
+
+      console.log('MapView: Adding tile layer')
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(map)
+
+      // Agregar funcionalidad de clic en mapa
+      if (onMapClick && interactive) {
+        console.log('MapView: Adding map click handler')
+        map.on('click', (e: L.LeafletMouseEvent) => {
+          onMapClick({ lat: e.latlng.lat, lng: e.latlng.lng })
+        })
+      }
 
     // Agregar marcador para ubicación seleccionada
     if (selectedLocation) {
@@ -279,14 +291,55 @@ export function MapView({
       }
     })
 
+    mapInstanceRef.current = map
+    setIsMapLoading(false)
+    setMapError(null)
+    console.log('MapView: Map initialized successfully')
+
     return () => {
+      console.log('MapView: Cleaning up map instance')
       map.remove()
       mapInstanceRef.current = null
+    }
+    } catch (error) {
+      console.error('MapView: Error initializing map:', error)
+      setMapError(error instanceof Error ? error.message : 'Error desconocido al cargar el mapa')
+      setIsMapLoading(false)
     }
   }, [events, center, zoom, interactive, onMarkerClick])
 
   return (
-    <div className={`${className} rounded-lg overflow-hidden border border-border`}>
+    <div className={`${className} rounded-lg overflow-hidden border border-border relative`}>
+      {isMapLoading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+            <p className="text-sm text-muted-foreground">Cargando mapa...</p>
+          </div>
+        </div>
+      )}
+
+      {mapError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
+          <div className="text-center p-4">
+            <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm font-medium text-destructive mb-1">Error al cargar el mapa</p>
+            <p className="text-xs text-muted-foreground">{mapError}</p>
+            <button
+              onClick={() => {
+                setMapError(null)
+                setIsMapLoading(true)
+                // Trigger re-render by updating a dependency
+                window.location.reload()
+              }}
+              className="mt-2 text-xs bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90"
+            >
+              Reintentar
+            </button>
+          </div>
+        </div>
+      )}
+
       <div ref={mapRef} className="h-full w-full" />
       <style jsx global>{`
         .custom-marker {

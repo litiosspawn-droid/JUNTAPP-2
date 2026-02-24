@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Download, X, Smartphone, Zap, Wifi, Bell } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
+const oneWeek = 7 * 24 * 60 * 60 * 1000 // 7 days in milliseconds
+
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [showPrompt, setShowPrompt] = useState(false)

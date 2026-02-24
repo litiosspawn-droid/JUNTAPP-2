@@ -10,6 +10,7 @@ import { Calendar, MapPin, Users, Settings, LogOut, User, Mail } from "lucide-re
 import { useAuth } from '@/contexts/AuthContext'
 import { logoutUser, getUserProfile } from '@/lib/firebase/auth'
 import { getEvents, type Event } from '@/lib/firebase/events'
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -90,11 +91,12 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader className="text-center">
                   <div className="mx-auto mb-4">
-                    <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center">
-                      <span className="text-2xl font-bold text-primary-foreground">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src={userProfile?.photoURL} />
+                      <AvatarFallback className="text-2xl">
                         {user.displayName?.[0] || user.email?.[0] || 'U'}
-                      </span>
-                    </div>
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
                   <CardTitle className="text-xl">
                     {user.displayName || 'Usuario'}
@@ -110,6 +112,30 @@ export default function ProfilePage() {
                       <p className="text-sm text-muted-foreground">
                         {userProfile.bio}
                       </p>
+                    </div>
+                  )}
+
+                  {userProfile?.website && (
+                    <div>
+                      <h4 className="font-medium mb-2">Sitio web</h4>
+                      <a
+                        href={userProfile.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline"
+                      >
+                        {userProfile.website}
+                      </a>
+                    </div>
+                  )}
+
+                  {userProfile?.location && (
+                    <div>
+                      <h4 className="font-medium mb-2">Ubicación</h4>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        <span>{userProfile.location}</span>
+                      </div>
                     </div>
                   )}
                   

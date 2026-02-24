@@ -225,9 +225,8 @@ export default function EventDetailPage() {
                 <CardContent className="p-0">
                   <EventChat
                     eventId={eventId}
-                    chatExpiration={event?.chatExpiration}
-                    attendees={event?.attendees || []}
-                    creatorId={event?.creatorId}
+                    attendees={[]}  // TODO: Implement attendee tracking
+                    creatorId={event?.createdBy}
                   />
                 </CardContent>
               </Card>

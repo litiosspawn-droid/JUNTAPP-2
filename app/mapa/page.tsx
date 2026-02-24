@@ -45,6 +45,12 @@ const MapView = dynamic(
   }
 )
 
+const EventCard = dynamic(() => import("@/components/event-card").then((mod) => mod.EventCard), {
+  loading: () => (
+    <div className="h-32 animate-pulse rounded-lg bg-muted" />
+  ),
+})
+
 // Mapeo de iconos de categoría
 const CATEGORY_ICON_COMPONENTS: Record<string, React.ComponentType<any>> = {
   "music": Music,

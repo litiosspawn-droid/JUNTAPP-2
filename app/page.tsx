@@ -12,7 +12,7 @@ import { CATEGORIES, CATEGORY_COLORS, type Category } from "@/lib/firebase/event
 import { useEvents } from '@/hooks/use-events'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGeolocation } from '@/hooks/use-geolocation'
-import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar as CalendarIcon, Star, Search } from 'lucide-react'
+import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar, Star, Search } from 'lucide-react'
 
 // Lazy load heavy components
 const EventCard = dynamic(() => import("@/components/event-card").then((mod) => mod.EventCard), {
