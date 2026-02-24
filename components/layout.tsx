@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Search, User, Plus, MapPin, Home, Map, LogOut, UserIcon, Settings } from "lucide-react"
+import { Search, User, Plus, MapPin, Home, Map, LogOut, UserIcon, Settings, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useState } from "react"
@@ -61,6 +61,16 @@ export function Header() {
             >
               <Home className="h-4 w-4" />
               Inicio
+            </Button>
+          </Link>
+          <Link href="/comunidad">
+            <Button
+              variant={pathname === "/comunidad" ? "secondary" : "ghost"}
+              size="sm"
+              className="gap-2"
+            >
+              <Users className="h-4 w-4" />
+              Comunidad
             </Button>
           </Link>
           <Link href="/mapa">
@@ -163,6 +173,10 @@ export function Header() {
         <Link href="/" className="flex flex-col items-center gap-0.5">
           <Home className={`h-5 w-5 ${pathname === "/" ? "text-primary" : "text-muted-foreground"}`} />
           <span className={`text-xs ${pathname === "/" ? "text-primary font-medium" : "text-muted-foreground"}`}>Inicio</span>
+        </Link>
+        <Link href="/comunidad" className="flex flex-col items-center gap-0.5">
+          <Users className={`h-5 w-5 ${pathname === "/comunidad" ? "text-primary" : "text-muted-foreground"}`} />
+          <span className={`text-xs ${pathname === "/comunidad" ? "text-primary font-medium" : "text-muted-foreground"}`}>Comunidad</span>
         </Link>
         <Link href="/mapa" className="flex flex-col items-center gap-0.5">
           <Map className={`h-5 w-5 ${pathname === "/mapa" ? "text-primary" : "text-muted-foreground"}`} />
