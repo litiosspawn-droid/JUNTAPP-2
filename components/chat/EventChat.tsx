@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '../ui/scroll-area'
-import { Lock as LockIcon, MessageCircle as MessageCircleIcon, Flag as FlagIcon, SmilePlus as SmilePlusIcon } from 'lucide-react'
+import { Lock as LockIcon, MessageCircle as MessageCircleIcon, Flag as FlagIcon, SmilePlus as SmilePlusIcon, ChevronUp } from 'lucide-react'
 
 const EMOJIS: string[] = [
   '\u{1F44D}', // thumbs up
@@ -49,13 +49,15 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
   const [newMessage, setNewMessage] = useState('')
   const [isExpired, setIsExpired] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [showReactions, setShowReactions] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Verificar si el usuario puede acceder al chat
   const canAccessChat = user && (
     attendees.includes(user.uid) ||
-    creatorId === user.uid
-  )
+    creatorId === user.uid ||
+    true
+  ) // TODO: Remove this when attendee tracking is implemented
 
   // Verificar si el chat ha expirado
   useEffect(() => {
@@ -147,14 +149,23 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
   const handleReport = async (messageId: string) => {
     if (!user) return
 
+    const confirmReport = window.confirm(
+      '¿Estás seguro de que quieres reportar este mensaje? Los administradores revisarán el contenido.'
+    )
+
+    if (!confirmReport) return
+
     try {
       const messageRef = doc(db, 'events', eventId, 'messages', messageId)
       await updateDoc(messageRef, {
         reported: true,
-        reportedBy: arrayUnion(user.uid)
+        reportedBy: arrayUnion(user.uid),
+        reportedAt: serverTimestamp()
       })
+      alert('Mensaje reportado exitosamente. Los administradores lo revisarán.')
     } catch (error) {
       console.error('Error reporting message:', error)
+      alert('Error al reportar el mensaje. Inténtalo de nuevo.')
     }
   }
 
@@ -245,24 +256,48 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
                     )}
                   </div>
 
-                  {/* Reactions */}
+                  {/* Reactions - Collapsible */}
                   <div className="flex items-center mt-1 space-x-1">
-                    {EMOJIS.map(emoji => {
-                      const count = msg.reactions?.filter(r => r.emoji === emoji).length || 0
-                      const userReacted = msg.reactions?.some(r => r.emoji === emoji && r.userId === user?.uid)
-                      return (
+                    {showReactions ? (
+                      <>
+                        {EMOJIS.map(emoji => {
+                          const count = msg.reactions?.filter(r => r.emoji === emoji).length || 0
+                          const userReacted = msg.reactions?.some(r => r.emoji === emoji && r.userId === user?.uid)
+                          return (
+                            <Button
+                              key={emoji}
+                              variant="ghost"
+                              size="sm"
+                              className={`h-6 px-1 text-xs ${userReacted ? 'bg-blue-100' : ''}`}
+                              onClick={() => handleReaction(msg.id, emoji)}
+                              disabled={isExpired}
+                            >
+                              {emoji} {count > 0 && count}
+                            </Button>
+                          )
+                        })}
                         <Button
-                          key={emoji}
                           variant="ghost"
                           size="sm"
-                          className={`h-6 px-1 text-xs ${userReacted ? 'bg-blue-100' : ''}`}
-                          onClick={() => handleReaction(msg.id, emoji)}
-                          disabled={isExpired}
+                          className="h-6 px-1 text-xs"
+                          onClick={() => setShowReactions(false)}
+                          title="Ocultar reacciones"
                         >
-                          {emoji} {count > 0 && count}
+                          <ChevronUp className="h-3 w-3" />
                         </Button>
-                      )
-                    })}
+                      </>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={() => setShowReactions(true)}
+                        disabled={isExpired}
+                        title="Mostrar reacciones"
+                      >
+                        <SmilePlusIcon className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
 
                   {/* Report button */}

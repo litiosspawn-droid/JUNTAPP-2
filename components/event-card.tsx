@@ -55,8 +55,9 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
       aria-label={`Ver detalles del evento: ${event.title}`}
     >
       <article className="relative">
-        <div className="aspect-[16/10] bg-muted relative overflow-hidden">
-          {event.flyerUrl ? (
+        {/* Image section - only show if flyer exists */}
+        {event.flyerUrl && (
+          <div className="aspect-[16/10] bg-muted relative overflow-hidden">
             <Image
               src={event.flyerUrl}
               alt={`Imagen promocional del evento: ${event.title}`}
@@ -64,42 +65,52 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
               className="object-cover transition-transform group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
-              <Calendar className="h-12 w-12 text-muted-foreground" aria-hidden="true" />
-            </div>
-          )}
 
-          {/* Category Badge */}
-          <div className="absolute top-3 left-3">
-            <Badge
-              className={CATEGORY_COLORS[event.category]}
-              variant="secondary"
-              aria-label={`Categoría: ${event.category}`}
-            >
-              {event.category}
-            </Badge>
-          </div>
-
-          {/* Delete Button - Only for creator */}
-          {isOwner && (
-            <div className="absolute top-3 right-3">
-              <Button
-                variant="destructive"
-                size="sm"
-                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
-                onClick={handleDelete}
-                disabled={isDeleting}
-                aria-label={`Eliminar evento: ${event.title}`}
-                title={`Eliminar evento: ${event.title}`}
+            {/* Category Badge */}
+            <div className="absolute top-3 left-3">
+              <Badge
+                className={CATEGORY_COLORS[event.category]}
+                variant="secondary"
+                aria-label={`Categoría: ${event.category}`}
               >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
+                {event.category}
+              </Badge>
+            </div>
+
+            {/* Delete Button - Only for creator */}
+            {isOwner && (
+              <div className="absolute top-3 right-3">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  aria-label={`Eliminar evento: ${event.title}`}
+                  title={`Eliminar evento: ${event.title}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Content section */}
+        <div className={event.flyerUrl ? "p-4" : "p-4"}>
+          {/* Category Badge - Show here if no flyer */}
+          {!event.flyerUrl && (
+            <div className="mb-3">
+              <Badge
+                className={CATEGORY_COLORS[event.category]}
+                variant="secondary"
+                aria-label={`Categoría: ${event.category}`}
+              >
+                {event.category}
+              </Badge>
             </div>
           )}
-        </div>
 
-        <div className="p-4">
           <div className="space-y-3">
             {/* Event Title */}
             <h3 className="font-semibold text-lg leading-tight line-clamp-2" id={`event-title-${event.id}`}>
@@ -153,6 +164,23 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
                     {tag}
                   </Badge>
                 ))}
+              </div>
+            )}
+
+            {/* Delete Button - Show here if no flyer */}
+            {isOwner && !event.flyerUrl && (
+              <div className="pt-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="w-full gap-2"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  aria-label={`Eliminar evento: ${event.title}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Eliminar
+                </Button>
               </div>
             )}
           </div>
