@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css"
 import "leaflet.markercluster/dist/MarkerCluster.css"
 import "leaflet.markercluster/dist/MarkerCluster.Default.css"
 import "leaflet.markercluster"
+import { MapPin } from "lucide-react"
 import type { Event, CATEGORY_COLORS } from "@/lib/firebase/events"
 
 const DEFAULT_CENTER: [number, number] = [-34.6037, -58.3816]
@@ -163,7 +164,6 @@ export function MapView({
       "Otros": "#6b7280",
     }
 
-    // Crear grupo de marcadores con clustering
     const markers = L.markerClusterGroup({
       chunkedLoading: true,
       chunkInterval: 200,
@@ -175,7 +175,6 @@ export function MapView({
       removeOutsideVisibleBounds: true,
       animate: true,
       disableClusteringAtZoom: 16,
-      maxZoom: 18,
       iconCreateFunction: function(cluster) {
         const count = cluster.getChildCount();
         let className = 'marker-cluster-small';
@@ -292,11 +291,13 @@ export function MapView({
         const popup = e.popup
         const content = popup.getContent()
         // Reemplazar onclick con ontouchstart para mejor compatibilidad móvil
-        const newContent = content.replace(
-          /onclick="window\.open/g,
-          'ontouchstart="window.open'
-        )
-        popup.setContent(newContent)
+        if (typeof content === 'string') {
+          const newContent = content.replace(
+            /onclick="window\.open/g,
+            'ontouchstart="window.open'
+          )
+          popup.setContent(newContent)
+        }
       })
 
       // Mejorar popups en móviles - hacerlos más anchos
