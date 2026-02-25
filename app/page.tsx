@@ -18,7 +18,9 @@ import { useGeolocation } from '@/hooks/use-geolocation'
 import { usePullToRefresh, PullToRefreshContainer } from '@/components/ui/pull-to-refresh'
 import { useUnifiedToast } from '@/hooks/use-unified-toast'
 import { VirtualGrid } from '@/components/ui/virtual-grid'
-import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar, Star, Search, LogIn, RefreshCcw, AlertCircle } from 'lucide-react'
+import { FadeIn, SlideIn, Stagger } from '@/components/ui/animations'
+import { OnboardingModal } from '@/components/onboarding-modal'
+import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar, Star, Search, LogIn, RefreshCcw, AlertCircle, Zap, Heart, Clock } from 'lucide-react'
 import { ErrorBoundary } from '@/components/error-boundary'
 
 // Lazy load heavy components
@@ -230,62 +232,78 @@ export default function HomePage() {
       <Header />
 
       <main className="flex-1">
+        {/* Onboarding para nuevos usuarios */}
+        <OnboardingModal />
+
         {/* Hero Section Mejorado */}
         <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="grid gap-8 lg:grid-cols-2 lg:gap-12 items-center">
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <Badge className="w-fit" variant="secondary">
-                    <Sparkles className="h-3 w-3 mr-1" />
-                    Comunidad Local
-                  </Badge>
-                  <h1 className="text-4xl font-bold tracking-tight text-foreground md:text-6xl lg:text-7xl text-balance">
-                    Descubre{" "}
-                    <span className="text-primary">eventos</span>{" "}
-                    cerca tuyo
-                  </h1>
-                  <p className="text-lg text-muted-foreground md:text-xl max-w-2xl">
-                    Explora lo que pasa en tu zona, conecta con tu comunidad y vive experiencias inolvidables.
-                  </p>
-                </div>
+              <SlideIn direction="left" delay={200}>
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <FadeIn delay={400}>
+                      <Badge className="w-fit" variant="secondary">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        Comunidad Local
+                      </Badge>
+                    </FadeIn>
+                    <FadeIn delay={600}>
+                      <h1 className="text-4xl font-bold tracking-tight text-foreground md:text-6xl lg:text-7xl text-balance">
+                        Descubre{" "}
+                        <span className="text-primary">eventos</span>{" "}
+                        cerca tuyo
+                      </h1>
+                    </FadeIn>
+                    <FadeIn delay={800}>
+                      <p className="text-lg text-muted-foreground md:text-xl max-w-2xl">
+                        Explora lo que pasa en tu zona, conecta con tu comunidad y vive experiencias inolvidables.
+                      </p>
+                    </FadeIn>
+                  </div>
 
-                {/* CTA Buttons */}
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link href="/crear">
-                    <Button size="lg" className="gap-2 text-base px-8 py-3">
-                      <Plus className="h-5 w-5" />
-                      Crear Evento
-                    </Button>
-                  </Link>
-                  <Link href="/mapa">
-                    <Button variant="outline" size="lg" className="gap-2 text-base px-8 py-3">
-                      <MapPin className="h-5 w-5" />
-                      Explorar Mapa
-                    </Button>
-                  </Link>
-                </div>
+                  {/* CTA Buttons */}
+                  <FadeIn delay={1000}>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <Link href="/crear">
+                        <Button size="lg" className="gap-2 text-base px-8 py-3 shadow-lg hover:shadow-xl transition-shadow">
+                          <Plus className="h-5 w-5" />
+                          Crear Evento
+                        </Button>
+                      </Link>
+                      <Link href="/mapa">
+                        <Button variant="outline" size="lg" className="gap-2 text-base px-8 py-3">
+                          <MapPin className="h-5 w-5" />
+                          Explorar Mapa
+                        </Button>
+                      </Link>
+                    </div>
+                  </FadeIn>
 
-                {/* Estadísticas rápidas */}
-                <div className="grid grid-cols-3 gap-4 pt-8">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{homepageStats.upcomingEvents}</div>
-                    <div className="text-sm text-muted-foreground">Próximos</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{homepageStats.totalEvents}</div>
-                    <div className="text-sm text-muted-foreground">Total</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{homepageStats.totalAttendees}</div>
-                    <div className="text-sm text-muted-foreground">Asistentes</div>
-                  </div>
+                  {/* Estadísticas rápidas */}
+                  <FadeIn delay={1200}>
+                    <div className="grid grid-cols-3 gap-4 pt-8">
+                      <div className="text-center p-4 rounded-lg bg-card/50 backdrop-blur-sm border">
+                        <div className="text-2xl font-bold text-primary">{homepageStats.upcomingEvents}</div>
+                        <div className="text-sm text-muted-foreground">Próximos</div>
+                      </div>
+                      <div className="text-center p-4 rounded-lg bg-card/50 backdrop-blur-sm border">
+                        <div className="text-2xl font-bold text-primary">{homepageStats.totalEvents}</div>
+                        <div className="text-sm text-muted-foreground">Total</div>
+                      </div>
+                      <div className="text-center p-4 rounded-lg bg-card/50 backdrop-blur-sm border">
+                        <div className="text-2xl font-bold text-primary">{homepageStats.totalAttendees}</div>
+                        <div className="text-sm text-muted-foreground">Asistentes</div>
+                      </div>
+                    </div>
+                  </FadeIn>
                 </div>
-              </div>
+              </SlideIn>
 
               {/* Map Preview - SIEMPRE VISIBLE */}
-              <div className="relative">
-                <div className="relative h-80 md:h-96 rounded-xl overflow-hidden shadow-2xl">
+              <SlideIn direction="right" delay={400}>
+                <div className="relative">
+                  <div className="relative h-80 md:h-96 rounded-xl overflow-hidden shadow-2xl">
                   <ErrorBoundary
                     fallback={
                       <div className="h-full w-full bg-muted flex items-center justify-center">
@@ -368,6 +386,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+              </SlideIn>
             </div>
           </div>
         </section>
@@ -375,58 +394,62 @@ export default function HomePage() {
         {/* Search and Filters */}
         <section className="py-8 border-b bg-card/50">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto space-y-6">
-              {/* Search Bar */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar eventos por nombre, descripción o ubicación..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-12 text-base"
-                />
-                {searchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
-                    onClick={() => setSearchQuery("")}
-                  >
-                    ✕
-                  </Button>
-                )}
-              </div>
-
-              {/* Category Filters */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                <Button
-                  variant={activeFilter === null ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveFilter(null)}
-                  className="gap-2 shrink-0"
-                  disabled={loading}
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Todos
-                </Button>
-                {CATEGORIES.map((cat) => {
-                  const IconComponent = CATEGORY_ICON_MAP[cat]
-                  return (
+            <FadeIn>
+              <div className="max-w-4xl mx-auto space-y-6">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar eventos por nombre, descripción o ubicación..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-12 text-base"
+                  />
+                  {searchQuery && (
                     <Button
-                      key={cat}
-                      variant={activeFilter === cat ? "default" : "outline"}
+                      variant="ghost"
                       size="sm"
-                      onClick={() => setActiveFilter(activeFilter === cat ? null : cat)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2"
+                      onClick={() => setSearchQuery("")}
+                    >
+                      ✕
+                    </Button>
+                  )}
+                </div>
+
+                {/* Category Filters */}
+                <Stagger staggerDelay={50}>
+                  <div className="flex items-center gap-2 overflow-x-auto pb-2">
+                    <Button
+                      variant={activeFilter === null ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setActiveFilter(null)}
                       className="gap-2 shrink-0"
                       disabled={loading}
                     >
-                      <IconComponent className="h-4 w-4" />
-                      {cat}
+                      <Sparkles className="h-4 w-4" />
+                      Todos
                     </Button>
-                  )
-                })}
+                    {CATEGORIES.map((cat) => {
+                      const IconComponent = CATEGORY_ICON_MAP[cat]
+                      return (
+                        <Button
+                          key={cat}
+                          variant={activeFilter === cat ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setActiveFilter(activeFilter === cat ? null : cat)}
+                          className="gap-2 shrink-0"
+                          disabled={loading}
+                        >
+                          <IconComponent className="h-4 w-4" />
+                          {cat}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                </Stagger>
               </div>
-            </div>
+            </FadeIn>
           </div>
         </section>
 
