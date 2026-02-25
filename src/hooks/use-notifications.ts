@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { messaging } from '@/lib/firebase/client';
+import { messaging, getFCMMessaging } from '@/lib/firebase/client';
 import { getToken, onMessage } from 'firebase/messaging';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
@@ -16,6 +16,7 @@ export function useNotifications() {
   const { user } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [loading, setLoading] = useState(true);
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     eventReminders: true,
     chatMessages: true,
@@ -26,23 +27,31 @@ export function useNotifications() {
   // Solicitar permiso de notificaciones
   const requestPermission = async () => {
     try {
-      if (!messaging) {
-        console.warn('FCM not supported');
+      // Verificar soporte del navegador
+      if (!('Notification' in window)) {
+        console.warn('Este navegador no soporta notificaciones');
         return false;
       }
 
       const permissionResult = await Notification.requestPermission();
       setPermission(permissionResult);
+      setLoading(false);
 
       if (permissionResult === 'granted') {
+        console.log('[Notificaciones] Permiso concedido');
         await registerServiceWorker();
         await getFCMToken();
         return true;
+      } else if (permissionResult === 'denied') {
+        console.warn('[Notificaciones] Permiso denegado');
+      } else {
+        console.log('[Notificaciones] Permiso pendiente');
       }
 
       return false;
     } catch (error) {
       console.error('Error requesting notification permission:', error);
+      setLoading(false);
       return false;
     }
   };
@@ -62,21 +71,38 @@ export function useNotifications() {
   // Obtener token FCM
   const getFCMToken = async () => {
     try {
-      if (!messaging || !user) return;
+      if (!user) {
+        console.log('[Notificaciones] Usuario no autenticado');
+        return;
+      }
 
-      const currentToken = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+      const fcmMessaging = await getFCMMessaging();
+      
+      if (!fcmMessaging) {
+        console.warn('[Notificaciones] FCM no disponible');
+        return;
+      }
+
+      const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+      
+      if (!vapidKey) {
+        console.error('[Notificaciones] VAPID key no configurada');
+        return;
+      }
+
+      const currentToken = await getToken(fcmMessaging, {
+        vapidKey: vapidKey,
       });
 
       if (currentToken) {
         setToken(currentToken);
         await saveTokenToFirestore(currentToken);
-        console.log('FCM token obtained:', currentToken);
+        console.log('[Notificaciones] Token FCM obtenido:', currentToken.substring(0, 20) + '...');
       } else {
-        console.log('No registration token available.');
+        console.log('[Notificaciones] No hay token de registro disponible');
       }
     } catch (error) {
-      console.error('Error getting FCM token:', error);
+      console.error('[Notificaciones] Error obteniendo token FCM:', error);
     }
   };
 
@@ -134,11 +160,22 @@ export function useNotifications() {
     return unsubscribe;
   }, []);
 
-  // Inicializar permisos al cargar
+  // Inicializar permisos y verificar soporte al cargar
   useEffect(() => {
-    if ('Notification' in window) {
-      setPermission(Notification.permission);
-    }
+    const initNotifications = async () => {
+      if ('Notification' in window) {
+        setPermission(Notification.permission);
+        
+        // Verificar si FCM está soportado
+        const fcmMessaging = await getFCMMessaging();
+        console.log('[Notificaciones] FCM disponible:', !!fcmMessaging);
+      } else {
+        console.warn('[Notificaciones] API de notificaciones no soportada');
+      }
+      setLoading(false);
+    };
+
+    initNotifications();
   }, []);
 
   // Obtener token cuando el usuario se autentica

@@ -33,13 +33,27 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
 
         // Fetch user profile
         const userDoc = await getDoc(doc(db, 'users', resolvedParams.id));
+        
+        // Si el usuario no existe, crear un perfil básico
         if (!userDoc.exists()) {
-          setError('Usuario no encontrado');
-          return;
+          // El usuario no tiene documento en Firestore, usar datos básicos
+          setProfile({
+            uid: resolvedParams.id,
+            displayName: 'Usuario',
+            email: '',
+            photoURL: null,
+            bio: '',
+            location: '',
+            website: '',
+            banned: false,
+            role: 'user',
+            createdAt: null,
+            updatedAt: null,
+          });
+        } else {
+          const userData = userDoc.data() as UserProfile;
+          setProfile(userData);
         }
-
-        const userData = userDoc.data() as UserProfile;
-        setProfile(userData);
 
         // Fetch created events
         let createdEventsList: Event[] = [];

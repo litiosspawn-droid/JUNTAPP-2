@@ -19,16 +19,41 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Inicializar Firebase Cloud Messaging (solo en cliente y si es soportado)
-let messaging: any = null;
-if (typeof window !== 'undefined') {
-  isSupported().then((supported) => {
-    if (supported) {
+// Inicializar Firebase Cloud Messaging (solo en cliente)
+let messaging: ReturnType<typeof getMessaging> | null = null;
+
+// Función para obtener messaging (lazy loading)
+export const getFCMMessaging = async (): Promise<typeof messaging> => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  
+  try {
+    const supported = await isSupported();
+    if (supported && !messaging) {
       messaging = getMessaging(app);
     }
-  }).catch((error) => {
+    return messaging;
+  } catch (error) {
     console.warn('FCM not supported:', error);
-  });
+    return null;
+  }
+};
+
+// Intentar inicializar messaging inmediatamente en el cliente
+if (typeof window !== 'undefined') {
+  isSupported()
+    .then((supported) => {
+      if (supported) {
+        messaging = getMessaging(app);
+        console.log('[Firebase] FCM initialized');
+      } else {
+        console.log('[Firebase] FCM not supported in this browser');
+      }
+    })
+    .catch((error) => {
+      console.warn('[Firebase] FCM initialization error:', error);
+    });
 }
 
 export { app, auth, db, storage, messaging };

@@ -50,7 +50,7 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
 
   return (
     <Link
-      href={`/evento/${event.id}`}
+      href={`/events/${event.id}`}
       className="block group overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
       aria-label={`Ver detalles del evento: ${event.title}`}
     >

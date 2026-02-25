@@ -29,8 +29,9 @@ service cloud.firestore {
     
     // Users collection
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
-      allow create: if isAuthenticated() && 
+      allow read: if true; // Permitir lectura pública de perfiles de usuario
+      allow write: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() &&
                     isOwner(userId) &&
                     request.resource.data.keys().hasAll(['email', 'username', 'role']) &&
                     request.resource.data.role in ['user', 'admin'];
@@ -40,26 +41,47 @@ service cloud.firestore {
     match /events/{eventId} {
       allow read: if true; // Permitir lectura pública para que aparezcan en homepage
       allow create: if isAuthenticated() && isNotBanned(); // Permitir creación a todos los usuarios registrados y no baneados
-      allow update: if request.auth != null && request.auth.uid == resource.data.createdBy;
-      allow delete: if request.auth != null && request.auth.uid == resource.data.createdBy; // Solo el creador puede eliminar
+      
+      // Permitir update: al creador permite todo, a cualquier usuario autenticado permite solo actualizar el contador attendees
+      allow update: if request.auth != null && 
+                    (request.auth.uid == resource.data.createdBy || 
+                     request.auth.uid == resource.data.creatorId ||
+                     // Permitir actualización del campo attendees (increment/decrement)
+                     request.resource.data.attendees is number);
+                      
+      allow delete: if request.auth != null && 
+                    (request.auth.uid == resource.data.createdBy || 
+                     request.auth.uid == resource.data.creatorId); // Solo el creador puede eliminar
+
+      // Messages subcollection under events
+      match /messages/{messageId} {
+        allow read: if isAuthenticated() && isNotBanned();
+        allow create: if isAuthenticated() && isNotBanned() && isOwner(request.resource.data.userId);
+        allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+        allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      }
     }
     
     // Chats collection
     match /chats/{chatId} {
       allow read, write: if isNotBanned();
-      
+
       // Messages subcollection
       match /messages/{messageId} {
         allow read: if isNotBanned();
-        allow create: if isAuthenticated() && 
+        allow create: if isAuthenticated() &&
                      isNotBanned() &&
                      isOwner(request.resource.data.userId) &&
-                     request.resource.data.keys().hasAll(['text', 'type', 'timestamp', 'userId']) &&
-                     request.resource.data.type in ['TEXT', 'IMAGE'];
+                     request.resource.data.keys().hasAll(['text', 'type', 'timestamp', 'userId', 'eventId']) &&
+                     request.resource.data.type in ['TEXT', 'IMAGE'] &&
+                     // Verificar que el evento exista
+                     get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.id != null;
         allow update: if isOwner(get(/databases/$(database)/documents/chats/$(chatId)/messages/$(messageId).data.userId)) ||
                      isAdmin();
         allow delete: if isOwner(get(/databases/$(database)/documents/chats/$(chatId)/messages/$(messageId).data.userId)) ||
-                     isAdmin();
+                     isAdmin() ||
+                     // El creador del evento puede eliminar mensajes
+                     request.auth.uid == get(/databases/$(database)/documents/events/$(chatId)).data.creatorId;
       }
     }
     
@@ -77,10 +99,24 @@ service cloud.firestore {
     // FCM Tokens collection
     match /fcmTokens/{userId} {
       allow read, write: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && 
+      allow create: if isOwner(userId) &&
                     request.resource.data.keys().hasAll(['token', 'platform']);
     }
-    
+
+    // Attendees collection
+    match /attendees/{attendeeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() &&
+                    isNotBanned() &&
+                    request.resource.data.userId == request.auth.uid &&
+                    request.resource.data.eventId != null &&
+                    request.resource.data.status in ['confirmed', 'pending', 'cancelled'];
+      allow update: if isAuthenticated() &&
+                    (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() &&
+                    (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
     // Default deny rule
     match /{document=**} {
       allow read, write: if false;

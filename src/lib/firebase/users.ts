@@ -63,9 +63,14 @@ export async function getUserStats(userId: string): Promise<UserStats> {
     const createdEventsSnapshot = await getDocs(createdEventsQuery);
     const totalEventsCreated = createdEventsSnapshot.size;
 
-    // Eventos asistidos (esto requiere una colección separada de attendees)
-    // Por ahora, usaremos un valor por defecto
-    const totalEventsAttended = 0; // TODO: Implementar cuando tengamos attendees collection
+    // Eventos asistidos
+    const attendeesQuery = query(
+      collection(db, 'attendees'),
+      where('userId', '==', userId),
+      where('status', '==', 'confirmed')
+    );
+    const attendeesSnapshot = await getDocs(attendeesQuery);
+    const totalEventsAttended = attendeesSnapshot.size;
 
     // Estadísticas sociales (followers/following)
     const followersQuery = query(

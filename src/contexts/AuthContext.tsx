@@ -1,6 +1,7 @@
 'use client';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { auth } from '@/lib/firebase/client';
+import { auth, db } from '@/lib/firebase/client';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { User, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { signInWithGoogle, logoutUser } from '@/lib/firebase/auth';
 
@@ -36,7 +37,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = async (email: string, password: string): Promise<void> => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      const userId = result.user.uid;
+      
+      // Asegurar que el documento del usuario exista en Firestore
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        await setDoc(userRef, {
+          uid: userId,
+          email: email,
+          displayName: email.split('@')[0],
+          photoURL: null,
+          bio: '',
+          location: '',
+          website: '',
+          banned: false,
+          role: 'user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -45,7 +67,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const register = async (email: string, password: string): Promise<void> => {
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const userId = result.user.uid;
+      
+      // Crear documento de usuario en Firestore
+      const userRef = doc(db, 'users', userId);
+      const userDoc = await getDoc(userRef);
+      
+      if (!userDoc.exists()) {
+        await setDoc(userRef, {
+          uid: userId,
+          email: email,
+          displayName: email.split('@')[0],
+          photoURL: null,
+          bio: '',
+          location: '',
+          website: '',
+          banned: false,
+          role: 'user',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
     } catch (error) {
       console.error('Register error:', error);
       throw error;

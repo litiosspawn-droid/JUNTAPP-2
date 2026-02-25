@@ -2,10 +2,10 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Search, User, Plus, MapPin, Home, Map, LogOut, UserIcon, Settings, Users } from "lucide-react"
+import { Search, User, Plus, MapPin, Home, Map, LogOut, UserIcon, Settings, Users, Bell } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from '@/contexts/AuthContext'
 import { signInWithGoogle, logoutUser } from '@/lib/firebase/auth'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -18,11 +18,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Badge } from '@/components/ui/badge'
 
 export function Header() {
   const pathname = usePathname()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { user, loading } = useAuth()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleLogin = async () => {
     try {
@@ -88,6 +94,24 @@ export function Header() {
         <div className="flex items-center gap-2">
           <ThemeToggle />
 
+          {user && (
+            <Link href="/notificaciones">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                title="Notificaciones"
+              >
+                <Bell className="h-5 w-5" />
+                {mounted && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 p-0 text-xs flex items-center justify-center">
+                    0
+                  </Badge>
+                )}
+              </Button>
+            </Link>
+          )}
+
           <div className={`hidden items-center md:flex ${searchOpen ? "w-64" : "w-48"}`}>
             <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -131,6 +155,12 @@ export function Header() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/notificaciones" className="flex items-center gap-2">
+                      <Bell className="h-4 w-4" />
+                      Notificaciones
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href={`/profile/${user.uid}`} className="flex items-center gap-2">
                       <UserIcon className="h-4 w-4" />
@@ -178,6 +208,19 @@ export function Header() {
           <Users className={`h-5 w-5 ${pathname === "/comunidad" ? "text-primary" : "text-muted-foreground"}`} />
           <span className={`text-xs ${pathname === "/comunidad" ? "text-primary font-medium" : "text-muted-foreground"}`}>Comunidad</span>
         </Link>
+        {user && (
+          <Link href="/notificaciones" className="flex flex-col items-center gap-0.5 relative">
+            <div className="relative">
+              <Bell className={`h-5 w-5 ${pathname === "/notificaciones" ? "text-primary" : "text-muted-foreground"}`} />
+              {mounted && (
+                <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 p-0 text-[10px] flex items-center justify-center min-w-0">
+                  0
+                </Badge>
+              )}
+            </div>
+            <span className={`text-xs ${pathname === "/notificaciones" ? "text-primary font-medium" : "text-muted-foreground"}`}>Notif.</span>
+          </Link>
+        )}
         <Link href="/mapa" className="flex flex-col items-center gap-0.5">
           <Map className={`h-5 w-5 ${pathname === "/mapa" ? "text-primary" : "text-muted-foreground"}`} />
           <span className={`text-xs ${pathname === "/mapa" ? "text-primary font-medium" : "text-muted-foreground"}`}>Mapa</span>
@@ -187,21 +230,6 @@ export function Header() {
             <Plus className="h-5 w-5 text-primary-foreground" />
           </div>
         </Link>
-        {user ? (
-          <Link href={`/profile/${user.uid}`} className="flex flex-col items-center gap-0.5">
-            <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-xs text-primary-foreground">
-                {user.displayName?.[0] || user.email?.[0] || 'U'}
-              </span>
-            </div>
-            <span className="text-xs text-primary font-medium">Perfil</span>
-          </Link>
-        ) : (
-          <div className="flex flex-col items-center gap-0.5">
-            <User className="h-5 w-5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Login</span>
-          </div>
-        )}
       </div>
     </header>
   )

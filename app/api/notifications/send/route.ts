@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase/client';
-import { doc, getDoc } from 'firebase/firestore';
-
-// Configuración de Firebase Admin SDK (debería estar en variables de entorno)
-const FIREBASE_SERVER_KEY = process.env.FIREBASE_SERVER_KEY;
-
-if (!FIREBASE_SERVER_KEY) {
-  console.warn('FIREBASE_SERVER_KEY not configured - push notifications will not work');
-}
+import * as admin from '@/lib/firebase/admin';
+import { db, messaging } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,8 +23,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Obtener token FCM del usuario
-    const userDoc = await getDoc(doc(db, 'fcmTokens', userId));
-    if (!userDoc.exists()) {
+    const userDoc = await db.collection('fcmTokens').doc(userId).get();
+    if (!userDoc.exists) {
       return NextResponse.json(
         { error: 'User FCM token not found' },
         { status: 404 }
@@ -48,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Enviar notificación via FCM
+    // Enviar notificación via Firebase Admin SDK
     const result = await sendFCMNotification(fcmToken, payload);
 
     if (result) {
@@ -72,8 +65,8 @@ export async function POST(request: NextRequest) {
 // Verificar si el usuario quiere recibir este tipo de notificación
 async function checkNotificationPreferences(userId: string, type: string): Promise<boolean> {
   try {
-    const userDoc = await getDoc(doc(db, 'fcmTokens', userId));
-    if (!userDoc.exists()) return false;
+    const userDoc = await db.collection('fcmTokens').doc(userId).get();
+    if (!userDoc.exists) return false;
 
     const preferences = userDoc.data()?.preferences || {};
 
@@ -95,44 +88,31 @@ async function checkNotificationPreferences(userId: string, type: string): Promi
   }
 }
 
-// Enviar notificación via Firebase Cloud Messaging
+// Enviar notificación via Firebase Cloud Messaging usando Admin SDK
 async function sendFCMNotification(token: string, payload: any): Promise<boolean> {
   try {
-    if (!FIREBASE_SERVER_KEY) {
-      console.warn('Firebase server key not configured');
-      return false;
-    }
-
-    const fcmPayload = {
-      to: token,
+    const message: admin.messaging.Message = {
+      token,
       notification: {
         title: payload.title,
         body: payload.body,
-        icon: payload.icon || '/icon-192x192.png',
-        badge: payload.badge || '/icon-192x192.png',
-        click_action: payload.url || '/',
+      },
+      webpush: {
+        headers: {
+          icon: payload.icon || '/icon-192x192.png',
+          badge: payload.badge || '/icon-192x192.png',
+        },
+        fcmOptions: {
+          link: payload.url || '/',
+        },
       },
       data: payload.data || {},
     };
 
-    const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `key=${FIREBASE_SERVER_KEY}`,
-      },
-      body: JSON.stringify(fcmPayload),
-    });
+    const response = await messaging.send(message);
+    console.log('FCM notification sent:', response);
 
-    if (!response.ok) {
-      console.error('FCM API error:', response.status, await response.text());
-      return false;
-    }
-
-    const result = await response.json();
-    console.log('FCM notification sent:', result);
-
-    return result.success === 1 || result.failure === 0;
+    return true;
   } catch (error) {
     console.error('Error sending FCM notification:', error);
     return false;

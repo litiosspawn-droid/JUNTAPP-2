@@ -53,11 +53,8 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Verificar si el usuario puede acceder al chat
-  const canAccessChat = user && (
-    attendees.includes(user.uid) ||
-    creatorId === user.uid ||
-    true
-  ) // TODO: Remove this when attendee tracking is implemented
+  // Solo los asistentes confirmados o el creador pueden acceder
+  const canAccessChat = user && (attendees.includes(user.uid) || creatorId === user.uid)
 
   // Verificar si el chat ha expirado
   useEffect(() => {

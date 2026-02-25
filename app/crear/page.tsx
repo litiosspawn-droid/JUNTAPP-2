@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Header, Footer } from "@/components/layout"
 import { Button } from "@/components/ui/button"
@@ -12,9 +12,10 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { X, Upload, MapPin, Calendar, Clock, FileImage, AlertCircle, CheckCircle, Tag, Plus as PlusIcon } from "lucide-react"
+import { X, Upload, MapPin, Calendar, Clock, FileImage, AlertCircle, CheckCircle, Tag, Plus as PlusIcon, Search, Loader2 } from "lucide-react"
 import { useAuth } from '@/contexts/AuthContext'
 import { createEvent, CATEGORIES, SUBCATEGORIES, POPULAR_TAGS, CATEGORY_DESCRIPTIONS, type Category } from '@/lib/firebase/events'
+import { useToast } from '@/hooks/use-toast'
 import dynamic from "next/dynamic"
 
 const MapView = dynamic(() => import("@/components/map-view").then((mod) => mod.MapView), {
@@ -50,12 +51,14 @@ interface ValidationState {
 export default function CreateEventPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [eventCreated, setEventCreated] = useState(false)
   const [progress, setProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState('')
   const [flyerPreview, setFlyerPreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isGeocoding, setIsGeocoding] = useState(false)
 
   const [formData, setFormData] = useState({
     title: '',
@@ -172,6 +175,51 @@ export default function CreateEventPage() {
       setFlyerPreview(null)
     }
   }, [flyerFile])
+
+  // Función de geocoding
+  const handleGeocodeAddress = useCallback(async (address: string) => {
+    if (!address.trim()) return null
+
+    setIsGeocoding(true)
+    try {
+      const response = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`)
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error al geocodificar la dirección')
+      }
+
+      const data = await response.json()
+      
+      if (data.lat && data.lon) {
+        setFormData(prev => ({
+          ...prev,
+          lat: parseFloat(data.lat),
+          lng: parseFloat(data.lon),
+          address: data.display_name || address,
+        }))
+        
+        toast({
+          title: 'Ubicación encontrada',
+          description: `Coordenadas: ${data.lat}, ${data.lon}`,
+        })
+        
+        return { lat: parseFloat(data.lat), lng: parseFloat(data.lon) }
+      }
+      
+      return null
+    } catch (error) {
+      console.error('Error geocoding address:', error)
+      toast({
+        title: 'Error de geocoding',
+        description: error instanceof Error ? error.message : 'No se pudo geocodificar la dirección',
+        variant: 'destructive',
+      })
+      return null
+    } finally {
+      setIsGeocoding(false)
+    }
+  }, [toast])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -536,16 +584,37 @@ export default function CreateEventPage() {
                       Dirección *
                       {getFieldError('address') && <AlertCircle className="h-4 w-4 text-destructive" />}
                     </Label>
-                    <Input
-                      id="address"
-                      value={formData.address}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                      placeholder="Ej: Av. Corrientes 3456, Buenos Aires"
-                      className={getFieldError('address') ? 'border-destructive' : ''}
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="address"
+                        value={formData.address}
+                        onChange={(e) => handleInputChange('address', e.target.value)}
+                        onBlur={() => handleFieldBlur('address')}
+                        placeholder="Ej: Av. Corrientes 3456, Buenos Aires"
+                        className={getFieldError('address') ? 'border-destructive' : ''}
+                        disabled={isGeocoding}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleGeocodeAddress(formData.address)}
+                        disabled={!formData.address.trim() || isGeocoding}
+                        className="flex-shrink-0"
+                      >
+                        {isGeocoding ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Search className="h-4 w-4" />
+                        )}
+                        <span className="hidden sm:inline ml-2">Buscar</span>
+                      </Button>
+                    </div>
                     {getFieldError('address') && (
                       <p className="text-sm text-destructive">{getFieldError('address')}</p>
                     )}
+                    <p className="text-xs text-muted-foreground">
+                      Haz clic en "Buscar" para obtener las coordenadas automáticamente
+                    </p>
                   </div>
 
                   {/* Mapa para selección de ubicación */}

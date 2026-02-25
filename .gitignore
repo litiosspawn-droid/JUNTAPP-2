@@ -10,3 +10,7 @@ node_modules/
 .DS_Store
 .vercel
 .env*.local
+
+# Firebase Admin SDK
+*-firebase-adminsdk-*.json
+firebase-adminsdk-*.json
