@@ -77,7 +77,7 @@ function EditProfilePageContent() {
     )
   }
 
-  // Si no está logueado, mostrar mensaje
+  // Si no está logueado O no es el dueño del perfil, mostrar mensaje
   if (!user) {
     return (
       <div className="flex min-h-screen flex-col">
@@ -85,14 +85,39 @@ function EditProfilePageContent() {
         <main className="flex-1 flex items-center justify-center">
           <Card className="max-w-md">
             <CardHeader className="text-center">
-              <CardTitle>Acceso Requerido</CardTitle>
+              <CardTitle>Perfil no encontrado</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground text-center">
-                Debes iniciar sesión para editar tu perfil
+                El perfil que buscas no existe o no está disponible
               </p>
-              <Button onClick={() => router.push('/auth/login')} className="w-full">
-                Iniciar Sesión
+              <Button onClick={() => router.push('/')} className="w-full">
+                Volver al Inicio
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
+  // Verificar si es el dueño del perfil
+  if (user.uid !== profile?.uid) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <Card className="max-w-md">
+            <CardHeader className="text-center">
+              <CardTitle>Acceso denegado</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground text-center">
+                Solo puedes editar tu propio perfil
+              </p>
+              <Button onClick={() => router.push(`/profile/${user.uid}`)} className="w-full">
+                Ir a mi perfil
               </Button>
               <Button variant="outline" onClick={() => router.push('/')} className="w-full">
                 Volver al Inicio
