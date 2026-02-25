@@ -22,16 +22,8 @@ export function withAuth<P extends object>(
   return function WithAuth(props: P) {
     const { user, loading, isEmailVerified } = useAuth();
     const router = useRouter();
-    const [showContent, setShowContent] = useState(false);
 
-    // Solo esperar a que cargue auth, sin redirecciones
-    useEffect(() => {
-      if (!loading) {
-        setShowContent(true);
-      }
-    }, [loading]);
-
-    // Mostrar loading solo mientras Firebase verifica
+    // Mostrar loading SOLO mientras Firebase verifica el estado de auth
     if (loading) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
@@ -47,7 +39,7 @@ export function withAuth<P extends object>(
       );
     }
 
-    // Si no está logueado, mostrar mensaje simple
+    // Si no está logueado, mostrar mensaje simple SIN redirigir
     if (!user) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted p-4">
@@ -113,6 +105,7 @@ export function withAuth<P extends object>(
       );
     }
 
+    // Usuario autenticado - renderizar componente
     return <WrappedComponent {...props} />;
   };
 }

@@ -34,28 +34,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
-  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    // Suscribirse al estado de autenticación
+    // Suscribirse al estado de autenticación de Firebase
+    // Firebase restaura automáticamente la sesión del localStorage
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         setUser(user);
 
         if (user) {
-          // Solo recargar si pasó más de 5 minutos
-          const lastRefresh = localStorage.getItem('authLastRefresh');
-          const now = Date.now();
-          const shouldRefresh = !lastRefresh || (now - parseInt(lastRefresh)) > 5 * 60 * 1000;
-
-          if (shouldRefresh) {
-            await user.reload();
-            localStorage.setItem('authLastRefresh', now.toString());
-          }
-
           setIsEmailVerified(user.emailVerified);
 
-          // Ensure user document exists in Firestore (sin bloquear)
+          // Actualizar documento del usuario en Firestore (sin bloquear)
           const userRef = doc(db, 'users', user.uid);
           const userDoc = await getDoc(userRef);
 
@@ -75,7 +65,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               updatedAt: new Date(),
             }, { merge: true });
           } else {
-            // Update email verified status in Firestore
             await updateDoc(userRef, {
               emailVerified: user.emailVerified,
               lastLogin: new Date(),
@@ -83,21 +72,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
         } else {
           setIsEmailVerified(false);
-          localStorage.removeItem('authLastRefresh');
         }
-
-        setInitialized(true);
       } catch (error) {
         console.error('Error in onAuthStateChanged:', error);
-        setInitialized(true);
       } finally {
+        // IMPORTANTE: Solo terminar loading después de recibir el estado de auth
+        // Esto asegura que todas las páginas sepan si el usuario está logueado
         setLoading(false);
       }
     });
 
     return () => {
       unsubscribe();
-      setInitialized(false);
     };
   }, []);
 
