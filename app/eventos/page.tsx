@@ -174,22 +174,24 @@ export default function EventosPage() {
               enabled={isMobile}
               threshold={100}
             >
-              <VirtualGrid
-                items={filteredEvents}
-                itemHeight={480}
-                columns={isMobile ? 1 : window.innerWidth >= 1280 ? 4 : window.innerWidth >= 768 ? 2 : 3}
-                gap={24}
-                enabled={filteredEvents.length > 20}
-                renderItem={(event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    onDelete={refetch}
-                  />
-                )}
-                itemKey={(event) => event.id}
-                className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-              />
+              <div className="w-full max-w-full overflow-x-hidden">
+                <VirtualGrid
+                  items={filteredEvents}
+                  itemHeight={480}
+                  columns={isMobile ? 1 : window.innerWidth >= 1280 ? 4 : window.innerWidth >= 768 ? 2 : 3}
+                  gap={24}
+                  enabled={filteredEvents.length > 20}
+                  renderItem={(event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onDelete={refetch}
+                    />
+                  )}
+                  itemKey={(event) => event.id}
+                  className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                />
+              </div>
             </PullToRefreshContainer>
           ) : (
             <EmptyPreset

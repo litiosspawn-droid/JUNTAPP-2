@@ -207,16 +207,16 @@ export function VirtualGrid<T>({
   if (!enabled || items.length <= 20) {
     return (
       <div
-        className={className}
+        className={cn('w-full max-w-full overflow-x-hidden', className)}
         style={{
           display: 'grid',
-          gridTemplateColumns: `repeat(${columns}, 1fr)`,
+          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
           gap,
           ...style,
         }}
       >
         {items.map((item, index) => (
-          <div key={itemKey?.(item, index) || index}>
+          <div key={itemKey?.(item, index) || index} className="min-w-0">
             {renderItem(item, index)}
           </div>
         ))}
@@ -227,7 +227,7 @@ export function VirtualGrid<T>({
   return (
     <div
       ref={containerRef}
-      className={cn('overflow-auto', className)}
+      className={cn('overflow-auto overflow-x-hidden', className)}
       style={{
         ...style,
         contain: 'strict',
@@ -242,13 +242,14 @@ export function VirtualGrid<T>({
             left: 0,
             right: 0,
             display: 'grid',
-            gridTemplateColumns: `repeat(${columns}, 1fr)`,
+            gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
             gap,
           }}
         >
           {visibleItems.map((item, index) => (
             <div
               key={itemKey?.(item, startIndex + index) || startIndex + index}
+              className="min-w-0"
               role="listitem"
             >
               {renderItem(item, startIndex + index)}
