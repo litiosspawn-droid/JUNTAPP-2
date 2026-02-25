@@ -18,10 +18,11 @@ import { createEvent, CATEGORIES, SUBCATEGORIES, POPULAR_TAGS, CATEGORY_DESCRIPT
 import { useToast } from '@/hooks/use-toast'
 import { withAuth } from '@/hoc/withAuth'
 import { checkRateLimit, RATE_LIMITS, RateLimitError } from '@/lib/rate-limit'
-import dynamic from "next/dynamic"
 
 // Forzar renderizado dinámico para evitar problemas con autenticación
-export const dynamicIO = true
+export const dynamic = 'force-dynamic'
+
+import dynamic from "next/dynamic"
 
 const MapView = dynamic(() => import("@/components/map-view").then((mod) => mod.MapView), {
   ssr: false,
