@@ -32,65 +32,104 @@ export function withAuth<P extends object>(
     const { user, loading, isEmailVerified } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const [userRole, setUserRole] = useState<string | null>(null);
+    const [userRole, setUserRole] = useState<string>('user'); // Default a 'user'
     const [roleLoading, setRoleLoading] = useState(true);
+    const [hasRedirected, setHasRedirected] = useState(false);
 
-    // Obtener rol del usuario
+    // Obtener rol del usuario (solo una vez)
     useEffect(() => {
-      if (user) {
-        const getUserRole = async () => {
-          try {
-            const response = await fetch(`/api/user/${user.uid}/role`)
-            if (response.ok) {
-              const data = await response.json()
-              setUserRole(data.role)
-            }
-          } catch {
-            setUserRole('user')
-          } finally {
-            setRoleLoading(false)
-          }
-        }
-        getUserRole()
-      } else {
-        setRoleLoading(false)
+      if (!user) {
+        setRoleLoading(false);
+        return;
       }
-    }, [user]);
 
-    // Redirigir si no está autenticado
+      // Si ya tenemos el rol, no hacer nada
+      if (userRole !== 'user') {
+        setRoleLoading(false);
+        return;
+      }
+
+      const getUserRole = async () => {
+        try {
+          // Timeout de 3 segundos para evitar bloqueos
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
+          
+          const response = await fetch(`/api/user/${user.uid}/role`, {
+            signal: controller.signal,
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            const data = await response.json();
+            setUserRole(data.role || 'user');
+          } else {
+            // Si falla, asumir rol 'user'
+            setUserRole('user');
+          }
+        } catch {
+          // Si falla, asumir rol 'user'
+          setUserRole('user');
+        } finally {
+          setRoleLoading(false);
+        }
+      };
+
+      getUserRole();
+    }, [user, userRole]);
+
+    // Redirigir si no está autenticado (solo una vez)
     useEffect(() => {
+      if (hasRedirected) return;
+      
       if (!loading && !user && !roleLoading) {
-        const redirectUrl = `${redirectUnauthenticated}?redirect=${encodeURIComponent(pathname)}`
+        setHasRedirected(true);
+        const redirectUrl = `${redirectUnauthenticated}?redirect=${encodeURIComponent(pathname)}`;
         router.push(redirectUrl);
       }
-    }, [user, loading, router, pathname, redirectUnauthenticated, roleLoading]);
+    }, [user, loading, router, pathname, redirectUnauthenticated, roleLoading, hasRedirected]);
 
-    // Redirigir si requiere email verificado y no lo está
+    // Redirigir si requiere email verificado y no lo está (solo una vez)
     useEffect(() => {
+      if (hasRedirected) return;
+      
       if (!loading && user && requireEmailVerification && !isEmailVerified && !roleLoading) {
+        setHasRedirected(true);
         router.push(redirectUnverified);
       }
-    }, [user, loading, isEmailVerified, requireEmailVerification, router, redirectUnverified, roleLoading]);
-
-    // Redirigir si no tiene el rol adecuado
-    useEffect(() => {
-      if (!loading && user && !roleLoading && allowedRoles.length > 0 && userRole) {
-        if (!allowedRoles.includes(userRole as any)) {
-          router.push(redirectUnauthorized);
-        }
-      }
-    }, [user, loading, userRole, allowedRoles, router, redirectUnauthorized, roleLoading]);
+    }, [user, loading, isEmailVerified, requireEmailVerification, router, redirectUnverified, roleLoading, hasRedirected]);
 
     // Mostrar loading mientras verifica autenticación y rol
-    if (loading || roleLoading) {
+    // Pero con timeout máximo de 5 segundos
+    const [showLoading, setShowLoading] = useState(true);
+    
+    useEffect(() => {
+      const timeout = setTimeout(() => {
+        setShowLoading(false);
+      }, 5000);
+      
+      if (!loading && !roleLoading) {
+        setShowLoading(false);
+      }
+      
+      return () => clearTimeout(timeout);
+    }, [loading, roleLoading]);
+
+    if (showLoading && (loading || roleLoading)) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
           <Card className="w-full max-w-md">
             <CardContent className="flex flex-col items-center justify-center p-8">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="text-muted-foreground text-center">
-                Verificando permisos...
+                {loading ? 'Cargando...' : 'Verificando permisos...'}
               </p>
+              {loading && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Si esto tarda más de lo normal, recargá la página
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -142,33 +181,6 @@ export function withAuth<P extends object>(
                   Volver al Inicio
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
-    // Si no tiene el rol adecuado
-    if (allowedRoles.length > 0 && userRole && !allowedRoles.includes(userRole as any)) {
-      return (
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
-          <Card className="w-full max-w-md border-red-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-600">
-                <AlertCircle className="h-6 w-6" />
-                Acceso Denegado
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                No tienes permisos suficientes para acceder a esta página.
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => router.push(redirectUnauthorized)}
-              >
-                Volver al Inicio
-              </Button>
             </CardContent>
           </Card>
         </div>
