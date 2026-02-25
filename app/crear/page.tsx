@@ -559,39 +559,128 @@ function CreateEventPageContent() {
                   </div>
 
                   {/* Fecha y Hora */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="date" className="flex items-center gap-2">
-                        Fecha *
-                        {getFieldError('date') && <AlertCircle className="h-4 w-4 text-destructive" />}
-                      </Label>
-                      <Input
-                        id="date"
-                        type="date"
-                        value={formData.date}
-                        onChange={(e) => handleInputChange('date', e.target.value)}
-                        className={getFieldError('date') ? 'border-destructive' : ''}
-                      />
-                      {getFieldError('date') && (
-                        <p className="text-sm text-destructive">{getFieldError('date')}</p>
-                      )}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="date" className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Fecha del evento *
+                          {getFieldError('date') && <AlertCircle className="h-4 w-4 text-destructive" />}
+                        </Label>
+                        <Input
+                          id="date"
+                          type="date"
+                          value={formData.date}
+                          onChange={(e) => handleInputChange('date', e.target.value)}
+                          min={new Date().toISOString().split('T')[0]}
+                          className={getFieldError('date') ? 'border-destructive' : ''}
+                        />
+                        {getFieldError('date') && (
+                          <p className="text-xs text-destructive">{getFieldError('date')}</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="time" className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Hora de inicio *
+                          {getFieldError('time') && <AlertCircle className="h-4 w-4 text-destructive" />}
+                        </Label>
+                        <Input
+                          id="time"
+                          type="time"
+                          value={formData.time}
+                          onChange={(e) => handleInputChange('time', e.target.value)}
+                          className={getFieldError('time') ? 'border-destructive' : ''}
+                        />
+                        {getFieldError('time') && (
+                          <p className="text-xs text-destructive">{getFieldError('time')}</p>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Quick date selectors */}
                     <div className="space-y-2">
-                      <Label htmlFor="time" className="flex items-center gap-2">
-                        Hora *
-                        {getFieldError('time') && <AlertCircle className="h-4 w-4 text-destructive" />}
-                      </Label>
-                      <Input
-                        id="time"
-                        type="time"
-                        value={formData.time}
-                        onChange={(e) => handleInputChange('time', e.target.value)}
-                        className={getFieldError('time') ? 'border-destructive' : ''}
-                      />
-                      {getFieldError('time') && (
-                        <p className="text-sm text-destructive">{getFieldError('time')}</p>
-                      )}
+                      <Label className="text-sm">Selección rápida</Label>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const today = new Date().toISOString().split('T')[0]
+                            handleInputChange('date', today)
+                          }}
+                          className="text-xs"
+                        >
+                          Hoy
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const tomorrow = new Date()
+                            tomorrow.setDate(tomorrow.getDate() + 1)
+                            handleInputChange('date', tomorrow.toISOString().split('T')[0])
+                          }}
+                          className="text-xs"
+                        >
+                          Mañana
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const weekend = new Date()
+                            const day = weekend.getDay()
+                            const diff = weekend.getDate() + ((5 - day + 7) % 7)
+                            weekend.setDate(diff)
+                            handleInputChange('date', weekend.toISOString().split('T')[0])
+                          }}
+                          className="text-xs"
+                        >
+                          Este Viernes
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const nextWeek = new Date()
+                            nextWeek.setDate(nextWeek.getDate() + 7)
+                            handleInputChange('date', nextWeek.toISOString().split('T')[0])
+                          }}
+                          className="text-xs"
+                        >
+                          Próxima Semana
+                        </Button>
+                      </div>
                     </div>
+
+                    {/* Info box */}
+                    {formData.date && (
+                      <div className="rounded-lg bg-primary/5 p-3 border border-primary/20">
+                        <div className="flex items-start gap-3">
+                          <Calendar className="h-5 w-5 text-primary mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-foreground">
+                              {new Date(formData.date + 'T12:00:00').toLocaleDateString('es-AR', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
+                            </p>
+                            {formData.time && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                🕐 {formData.time} hs
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Dirección */}
