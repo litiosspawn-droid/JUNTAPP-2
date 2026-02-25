@@ -16,12 +16,7 @@ import { X, Upload, MapPin, Calendar, Clock, FileImage, AlertCircle, CheckCircle
 import { useAuth } from '@/contexts/AuthContext'
 import { createEvent, CATEGORIES, SUBCATEGORIES, POPULAR_TAGS, CATEGORY_DESCRIPTIONS, type Category } from '@/lib/firebase/events'
 import { useToast } from '@/hooks/use-toast'
-import { withAuth } from '@/hoc/withAuth'
 import { checkRateLimit, RATE_LIMITS, RateLimitError } from '@/lib/rate-limit'
-
-// Forzar renderizado dinámico para evitar problemas con autenticación
-export const dynamic = 'force-dynamic'
-
 import dynamic from "next/dynamic"
 
 const MapView = dynamic(() => import("@/components/map-view").then((mod) => mod.MapView), {
@@ -895,5 +890,5 @@ function CreateEventPageContent() {
   )
 }
 
-// Proteger ruta: requiere autenticación y email verificado
-export default withAuth(CreateEventPageContent, { requireEmailVerification: true });
+// Sin autenticación requerida - cualquiera puede crear eventos
+export default CreateEventPageContent;
