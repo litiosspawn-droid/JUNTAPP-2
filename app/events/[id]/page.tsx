@@ -68,10 +68,28 @@ export default function EventPage() {
           return;
         }
 
-        const eventData = eventDoc.data() as Omit<Event, 'id'>;
-        setEvent({ id: eventDoc.id, ...eventData });
+        const eventData = eventDoc.data() as any;
+        
+        // Normalizar datos del evento (manejar creatorId vs createdBy)
+        const normalizedEvent: Event = {
+          id: eventDoc.id,
+          title: eventData.title || 'Sin título',
+          description: eventData.description || '',
+          date: eventData.date,
+          address: eventData.address || eventData.location?.address || 'Ubicación no especificada',
+          flyerUrl: eventData.flyerUrl,
+          category: eventData.category || 'Otros',
+          createdBy: eventData.createdBy || eventData.creatorId || '',
+          attendees: eventData.attendees || [],
+          attendeesCount: eventData.attendeesCount || 0,
+          time: eventData.time,
+          tags: eventData.tags || [],
+        };
+        
+        setEvent(normalizedEvent);
       } catch (error: any) {
-        setError(error.message);
+        console.error('Error fetching event:', error);
+        setError(error.message || 'Error al cargar el evento');
       } finally {
         setLoading(false);
       }

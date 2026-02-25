@@ -176,50 +176,45 @@ export const createEvent = async (eventData: Omit<Event, 'id' | 'createdAt' | 'u
       }
     }
 
-    // Crear evento con SOLO los campos requeridos por las reglas de Firestore
+    // Crear evento con TODOS los campos necesarios
     const eventToSave = {
       title: eventData.title,
       description: eventData.description,
       category: eventData.category,
+      address: eventData.address,
+      lat: eventData.lat,
+      lng: eventData.lng,
+      time: eventData.time,
       location: {
         latitude: eventData.lat,
         longitude: eventData.lng,
       },
       creatorId: userId,
-      date: eventData.date,
-    };
-
-    console.log('📝 Attempting to save event with required fields only...');
-    console.log('Event to save:', JSON.stringify(eventToSave, null, 2));
-    
-    // Verificar que todos los campos requeridos estén presentes
-    const requiredFields = ['title', 'description', 'category', 'location', 'creatorId', 'date'] as const;
-    const missingFields = requiredFields.filter(field => !(field in eventToSave) || eventToSave[field as keyof typeof eventToSave] === undefined || eventToSave[field as keyof typeof eventToSave] === null);
-    
-    if (missingFields.length > 0) {
-      console.error('❌ ERROR: Missing required fields:', missingFields);
-      throw new Error(`Campos requeridos faltantes: ${missingFields.join(', ')}`);
-    }
-    
-    console.log('✅ All required fields present');
-
-    const docRef = await addDoc(collection(db, EVENTS_COLLECTION), eventToSave);
-    console.log('✅ Event created successfully with ID:', docRef.id);
-
-    // Ahora actualizar con campos adicionales
-    const fullEventData = {
-      ...eventData,
-      flyerUrl,
-      attendees: 0,
       createdBy: userId,
+      date: eventData.date,
+      attendees: 0,
+      flyerUrl,
+      tags: eventData.tags || [],
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
 
-    console.log('🔄 Updating event with additional fields...');
-    await updateDoc(docRef, fullEventData);
-    console.log('✅ Event updated with additional fields');
+    console.log('📝 Attempting to save event with all fields...');
+    console.log('Event to save:', JSON.stringify(eventToSave, null, 2));
 
+    // Verificar que todos los campos requeridos estén presentes
+    const requiredFields = ['title', 'description', 'category', 'address', 'date', 'creatorId', 'createdBy'] as const;
+    const missingFields = requiredFields.filter(field => !(field in eventToSave) || eventToSave[field as keyof typeof eventToSave] === undefined || eventToSave[field as keyof typeof eventToSave] === null);
+
+    if (missingFields.length > 0) {
+      console.error('❌ ERROR: Missing required fields:', missingFields);
+      throw new Error(`Campos requeridos faltantes: ${missingFields.join(', ')}`);
+    }
+
+    console.log('✅ All required fields present');
+
+    const docRef = await addDoc(collection(db, EVENTS_COLLECTION), eventToSave);
+    console.log('✅ Event created successfully with ID:', docRef.id);
     console.log('🎉 EVENT CREATION COMPLETED SUCCESSFULLY');
     return docRef.id;
   } catch (error) {
