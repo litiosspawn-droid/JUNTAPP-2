@@ -36,8 +36,11 @@ export function withAuth<P extends object>(
     const [roleLoading, setRoleLoading] = useState(true);
     const [hasRedirected, setHasRedirected] = useState(false);
 
+    console.log('[withAuth] Render:', { pathname, loading, user: user ? user.uid : null, hasRedirected });
+
     // Obtener rol del usuario (solo una vez)
     useEffect(() => {
+      console.log('[withAuth] Role check effect:', { user: user ? user.uid : null, userRole });
       if (!user) {
         setRoleLoading(false);
         return;
@@ -78,12 +81,14 @@ export function withAuth<P extends object>(
 
     // Redirigir si no está autenticado (solo una vez)
     useEffect(() => {
+      console.log('[withAuth] Auth redirect check:', { loading, user: !!user, roleLoading, hasRedirected });
       if (hasRedirected) return;
 
       // Solo redirigir si terminó de cargar y no hay usuario
       if (!loading && !user && !roleLoading) {
         setHasRedirected(true);
         const redirectUrl = `${redirectUnauthenticated}?redirect=${encodeURIComponent(pathname)}`;
+        console.log('[withAuth] Redirecting to login:', redirectUrl);
         router.push(redirectUrl);
       }
     }, [user, loading, router, pathname, redirectUnauthenticated, roleLoading, hasRedirected]);

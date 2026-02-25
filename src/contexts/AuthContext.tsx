@@ -37,8 +37,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    console.log('[AuthContext] Setting up auth listener...');
     // Suscribirse al estado de autenticación
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('[AuthContext] Auth state changed:', user ? { uid: user.uid, email: user.email } : null);
       try {
         setUser(user);
 
@@ -49,6 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const shouldRefresh = !lastRefresh || (now - parseInt(lastRefresh)) > 5 * 60 * 1000;
 
           if (shouldRefresh) {
+            console.log('[AuthContext] Refreshing user token...');
             await user.reload();
             localStorage.setItem('authLastRefresh', now.toString());
           }
@@ -60,6 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const userDoc = await getDoc(userRef);
 
           if (!userDoc.exists()) {
+            console.log('[AuthContext] Creating user document in Firestore...');
             await setDoc(userRef, {
               uid: user.uid,
               email: user.email,
@@ -76,27 +80,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }, { merge: true });
           } else {
             // Update email verified status in Firestore
+            console.log('[AuthContext] Updating user document in Firestore...');
             await updateDoc(userRef, {
               emailVerified: user.emailVerified,
               lastLogin: new Date(),
             });
           }
         } else {
+          console.log('[AuthContext] User logged out');
           setIsEmailVerified(false);
           localStorage.removeItem('authLastRefresh');
         }
 
         setInitialized(true);
       } catch (error) {
-        console.error('Error in onAuthStateChanged:', error);
+        console.error('[AuthContext] Error in onAuthStateChanged:', error);
         setInitialized(true);
       } finally {
         // Siempre terminar loading después de recibir el estado de auth
+        console.log('[AuthContext] Setting loading to false');
         setLoading(false);
       }
     });
 
     return () => {
+      console.log('[AuthContext] Cleaning up auth listener');
       unsubscribe();
       setInitialized(false);
     };
