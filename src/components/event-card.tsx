@@ -55,8 +55,8 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
       aria-label={`Ver detalles del evento: ${event.title}`}
     >
       <article className="relative flex flex-col h-full overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-        {/* Image section - always show (with placeholder if no flyer) */}
-        {event.flyerUrl ? (
+        {/* Image section - only show if flyer exists */}
+        {event.flyerUrl && (
           <div className="h-[240px] bg-muted relative overflow-hidden shrink-0">
             <Image
               src={event.flyerUrl}
@@ -94,46 +94,21 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
               </div>
             )}
           </div>
-        ) : (
-          /* Placeholder for cards without flyer */
-          <div className="h-[240px] bg-gradient-to-br from-primary/10 via-primary/5 to-secondary/10 relative shrink-0 flex items-center justify-center">
-            {/* Category Badge */}
-            <div className="absolute top-3 left-3">
-              <Badge
-                className={CATEGORY_COLORS[event.category]}
-                variant="secondary"
-                aria-label={`Categoría: ${event.category}`}
-              >
-                {event.category}
-              </Badge>
-            </div>
-
-            {/* Placeholder icon */}
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center ${CATEGORY_COLORS[event.category] ? CATEGORY_COLORS[event.category].replace('bg-', 'bg-').replace('text-', 'text-') : 'bg-primary/20 text-primary'}`}>
-              <Calendar className="h-10 w-10" />
-            </div>
-
-            {/* Delete Button - Only for creator */}
-            {isOwner && (
-              <div className="absolute top-3 right-3">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  aria-label={`Eliminar evento: ${event.title}`}
-                  title={`Eliminar evento: ${event.title}`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                </Button>
-              </div>
-            )}
-          </div>
         )}
 
         {/* Content section */}
         <div className="p-4 flex flex-col flex-1 overflow-hidden">
+          {/* Category Badge - Show at top if no flyer, or below image if flyer */}
+          <div className="shrink-0 mb-3">
+            <Badge
+              className={CATEGORY_COLORS[event.category]}
+              variant="secondary"
+              aria-label={`Categoría: ${event.category}`}
+            >
+              {event.category}
+            </Badge>
+          </div>
+
           <div className="flex flex-col flex-1 space-y-2.5 overflow-hidden">
             {/* Event Title */}
             <h3 className="font-semibold text-lg leading-tight line-clamp-2 shrink-0" id={`event-title-${event.id}`}>
@@ -145,12 +120,12 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
               {event.description}
             </p>
 
-            {/* Event Details */}
+            {/* Event Details - Stacked vertically */}
             <div className="space-y-2 text-sm text-muted-foreground shrink-0">
               {/* Date and Time */}
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <time dateTime={`${event.date}T${event.time}`}>
+                <time dateTime={`${event.date}T${event.time}`} className="truncate">
                   {new Date(event.date).toLocaleDateString('es-ES', {
                     weekday: 'short',
                     day: 'numeric',
@@ -170,18 +145,18 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
               {/* Attendees */}
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{Number(event.attendees || 0).toString()} asistencias</span>
+                <span className="whitespace-nowrap">{Number(event.attendees || 0).toString()} asistencias</span>
               </div>
             </div>
 
-            {/* Tags - Push to bottom, show all */}
+            {/* Tags - Push to bottom, show all with wrap */}
             {event.tags && Array.isArray(event.tags) && event.tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-auto shrink-0">
                 {event.tags.map((tag) => (
                   <Badge
                     key={tag}
                     variant="outline"
-                    className="text-xs px-2 py-0.5"
+                    className="text-xs px-2 py-0.5 max-w-full truncate"
                     aria-label={`Etiqueta: ${tag}`}
                   >
                     {tag}
@@ -190,6 +165,23 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
               </div>
             )}
           </div>
+
+          {/* Delete Button - Show at bottom for owner */}
+          {isOwner && (
+            <div className="pt-3 mt-3 border-t shrink-0">
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full gap-2"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                aria-label={`Eliminar evento: ${event.title}`}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Eliminar evento
+              </Button>
+            </div>
+          )}
         </div>
       </article>
     </Link>
