@@ -16,10 +16,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Upload, AlertCircle, CheckCircle, User } from 'lucide-react'
 import type { UserProfile } from '@/lib/firebase/auth'
 import { ProfilePhotoUpload } from '@/components/profile-photo-upload'
-import { withAuth } from '@/hoc/withAuth'
 
 function EditProfilePageContent() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -33,34 +32,78 @@ function EditProfilePageContent() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [success, setSuccess] = useState(false)
 
+  // Esperar a que cargue la auth
   useEffect(() => {
-    if (!user) {
-      router.push('/')
-      return
-    }
-
-    const fetchProfile = async () => {
-      try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid))
-        if (userDoc.exists()) {
-          const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile
-          setProfile(userData)
-          setFormData({
-            displayName: userData.displayName || '',
-            bio: userData.bio || '',
-            location: userData.location || '',
-            website: userData.website || ''
-          })
+    if (!authLoading && user) {
+      const fetchProfile = async () => {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid))
+          if (userDoc.exists()) {
+            const userData = { uid: userDoc.id, ...userDoc.data() } as UserProfile
+            setProfile(userData)
+            setFormData({
+              displayName: userData.displayName || '',
+              bio: userData.bio || '',
+              location: userData.location || '',
+              website: userData.website || ''
+            })
+          }
+        } catch (error) {
+          console.error('Error fetching profile:', error)
+        } finally {
+          setLoading(false)
         }
-      } catch (error) {
-        console.error('Error fetching profile:', error)
-      } finally {
-        setLoading(false)
       }
-    }
 
-    fetchProfile()
-  }, [user, router])
+      fetchProfile()
+    } else if (!authLoading && !user) {
+      setLoading(false)
+    }
+  }, [user, authLoading])
+
+  // Mostrar loading mientras verifica auth
+  if (authLoading || loading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Cargando...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
+  // Si no está logueado, mostrar mensaje
+  if (!user) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <Card className="max-w-md">
+            <CardHeader className="text-center">
+              <CardTitle>Acceso Requerido</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-muted-foreground text-center">
+                Debes iniciar sesión para editar tu perfil
+              </p>
+              <Button onClick={() => router.push('/auth/login')} className="w-full">
+                Iniciar Sesión
+              </Button>
+              <Button variant="outline" onClick={() => router.push('/')} className="w-full">
+                Volver al Inicio
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
@@ -346,5 +389,5 @@ function EditProfilePageContent() {
   )
 }
 
-// Proteger ruta: requiere autenticación
-export default withAuth(EditProfilePageContent);
+// Sin autenticación requerida - mostrar mensaje si no está logueado
+export default EditProfilePageContent;

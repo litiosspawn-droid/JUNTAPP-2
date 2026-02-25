@@ -17,7 +17,7 @@ import type { Event } from '@/lib/firebase/events';
 import type { UserProfile } from '@/lib/firebase/auth';
 
 export default function ProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const resolvedParams = use(params);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -27,6 +27,22 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
   const [error, setError] = useState('');
 
   const isOwnProfile = user?.uid === resolvedParams.id;
+
+  // Esperar a que cargue la auth antes de mostrar nada
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Cargando...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   useEffect(() => {
     const fetchProfileData = async () => {
