@@ -5,9 +5,10 @@ import Link from "next/link"
 import { Header, Footer } from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton, SkeletonCard } from "@/components/ui/skeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyPreset } from "@/components/ui/empty"
-import { useEvents, type Category } from "@/lib/firebase/events"
+import { type Category } from "@/lib/firebase/events"
+import { useEvents } from '@/hooks/use-events'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePullToRefresh, PullToRefreshContainer } from '@/components/ui/pull-to-refresh'
 import { useUnifiedToast } from '@/hooks/use-unified-toast'
