@@ -57,12 +57,12 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
       <article className="relative flex flex-col h-full overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
         {/* Image section - only show if flyer exists */}
         {event.flyerUrl && (
-          <div className="aspect-[16/10] bg-muted relative overflow-hidden shrink-0">
+          <div className="aspect-[16/10] bg-muted relative overflow-hidden shrink-0 flex items-center justify-center">
             <Image
               src={event.flyerUrl}
               alt={`Imagen promocional del evento: ${event.title}`}
               fill
-              className="object-cover transition-transform group-hover:scale-105"
+              className="object-contain transition-transform group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
 
