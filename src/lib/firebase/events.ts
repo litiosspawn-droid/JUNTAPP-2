@@ -239,16 +239,22 @@ export const createEvent = async (eventData: Omit<Event, 'id' | 'createdAt' | 'u
 
 export const getEvents = async (): Promise<Event[]> => {
   try {
-    const q = query(collection(db, EVENTS_COLLECTION), orderBy('date', 'asc'));
+    // Obtener todos los eventos sin orderBy para evitar índices
+    const q = query(collection(db, EVENTS_COLLECTION));
     const querySnapshot = await getDocs(q);
-    
-    return querySnapshot.docs.map(doc => ({
+
+    const events = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
       date: doc.data().date?.toDate?.()?.toISOString().split('T')[0] || doc.data().date,
       createdAt: doc.data().createdAt,
       updatedAt: doc.data().updatedAt,
     } as Event));
+
+    // Ordenar por fecha en el cliente
+    events.sort((a, b) => new Date(a.date + 'T' + (a.time || '00:00')).getTime() - new Date(b.date + 'T' + (b.time || '00:00')).getTime());
+
+    return events;
   } catch (error) {
     console.error('Error getting events:', error);
     throw new Error('No se pudieron cargar los eventos');
@@ -257,20 +263,22 @@ export const getEvents = async (): Promise<Event[]> => {
 
 export const getEventsByCategory = async (category: Category): Promise<Event[]> => {
   try {
-    const q = query(
-      collection(db, EVENTS_COLLECTION), 
-      where('category', '==', category),
-      orderBy('date', 'asc')
-    );
+    // Obtener todos los eventos y filtrar por categoría en el cliente
+    const q = query(collection(db, EVENTS_COLLECTION));
     const querySnapshot = await getDocs(q);
-    
-    return querySnapshot.docs.map(doc => ({
+
+    const events = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
       date: doc.data().date?.toDate?.()?.toISOString().split('T')[0] || doc.data().date,
       createdAt: doc.data().createdAt,
       updatedAt: doc.data().updatedAt,
     } as Event));
+
+    // Filtrar por categoría y ordenar por fecha en el cliente
+    return events
+      .filter(event => event.category === category)
+      .sort((a, b) => new Date(a.date + 'T' + (a.time || '00:00')).getTime() - new Date(b.date + 'T' + (b.time || '00:00')).getTime());
   } catch (error) {
     console.error('Error getting events by category:', error);
     throw new Error('No se pudieron cargar los eventos de esta categoría');
