@@ -21,14 +21,19 @@ import dynamic from 'next/dynamic'
 
 const EventCard = dynamic(() => import("@/components/event-card").then((mod) => mod.EventCard), {
   loading: () => (
-    <div className="rounded-lg overflow-hidden border bg-card">
-      <div className="aspect-[4/3] bg-muted animate-pulse" />
-      <div className="p-4 space-y-3">
+    <div className="rounded-lg overflow-hidden border bg-card h-[320px]">
+      <div className="h-[160px] bg-muted animate-pulse" />
+      <div className="p-4 space-y-2">
         <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
         <div className="h-3 bg-muted rounded animate-pulse w-1/2" />
-        <div className="flex gap-2">
-          <div className="h-6 w-16 bg-muted rounded-full animate-pulse" />
-          <div className="h-6 w-20 bg-muted rounded-full animate-pulse" />
+        <div className="space-y-1.5">
+          <div className="h-3 bg-muted rounded animate-pulse w-2/3" />
+          <div className="h-3 bg-muted rounded animate-pulse w-3/4" />
+          <div className="h-3 bg-muted rounded animate-pulse w-1/2" />
+        </div>
+        <div className="flex gap-1.5 pt-2">
+          <div className="h-5 w-12 bg-muted rounded-full animate-pulse" />
+          <div className="h-5 w-16 bg-muted rounded-full animate-pulse" />
         </div>
       </div>
     </div>
@@ -167,7 +172,7 @@ export default function EventosPage() {
             >
               <VirtualGrid
                 items={filteredEvents}
-                itemHeight={280}
+                itemHeight={320}
                 columns={isMobile ? 1 : window.innerWidth >= 1280 ? 4 : window.innerWidth >= 768 ? 2 : 3}
                 gap={24}
                 enabled={filteredEvents.length > 20}

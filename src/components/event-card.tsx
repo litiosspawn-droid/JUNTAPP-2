@@ -51,13 +51,13 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
   return (
     <Link
       href={`/events/${event.id}`}
-      className="block group h-full"
+      className="block group h-[320px]"
       aria-label={`Ver detalles del evento: ${event.title}`}
     >
       <article className="relative flex flex-col h-full overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
         {/* Image section - only show if flyer exists */}
         {event.flyerUrl && (
-          <div className="aspect-[16/10] bg-muted relative overflow-hidden shrink-0 flex items-center justify-center">
+          <div className="h-[160px] bg-muted relative overflow-hidden shrink-0 flex items-center justify-center p-4">
             <Image
               src={event.flyerUrl}
               alt={`Imagen promocional del evento: ${event.title}`}
@@ -97,7 +97,7 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
         )}
 
         {/* Content section */}
-        <div className="p-4 flex flex-col flex-1">
+        <div className="p-4 flex flex-col flex-1 overflow-hidden">
           {/* Category Badge - Show here if no flyer */}
           {!event.flyerUrl && (
             <div className="mb-3 shrink-0">
@@ -111,22 +111,22 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
             </div>
           )}
 
-          <div className="flex flex-col flex-1 space-y-3">
+          <div className="flex flex-col flex-1 space-y-2 overflow-hidden">
             {/* Event Title */}
-            <h3 className="font-semibold text-lg leading-tight line-clamp-2 shrink-0" id={`event-title-${event.id}`}>
+            <h3 className="font-semibold text-base leading-tight line-clamp-2 shrink-0" id={`event-title-${event.id}`}>
               {event.title}
             </h3>
 
             {/* Event Description */}
-            <p className="text-sm text-muted-foreground line-clamp-2 shrink-0" aria-describedby={`event-title-${event.id}`}>
+            <p className="text-xs text-muted-foreground line-clamp-2 shrink-0" aria-describedby={`event-title-${event.id}`}>
               {event.description}
             </p>
 
             {/* Event Details */}
-            <div className="space-y-2 text-sm text-muted-foreground shrink-0">
+            <div className="space-y-1.5 text-xs text-muted-foreground shrink-0">
               {/* Date and Time */}
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 <time dateTime={`${event.date}T${event.time}`}>
                   {new Date(event.date).toLocaleDateString('es-ES', {
                     weekday: 'short',
@@ -138,7 +138,7 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
 
               {/* Location */}
               <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 <address className="not-italic truncate">
                   {event.address}
                 </address>
@@ -146,24 +146,29 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
 
               {/* Attendees */}
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 <span>{Number(event.attendees || 0).toString()} asistencias</span>
               </div>
             </div>
 
-            {/* Tags - Push to bottom */}
+            {/* Tags - Push to bottom, hide if too many */}
             {event.tags && Array.isArray(event.tags) && event.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-auto shrink-0">
-                {event.tags.map((tag) => (
+              <div className="flex flex-wrap gap-1 mt-auto shrink-0">
+                {event.tags.slice(0, 3).map((tag) => (
                   <Badge
                     key={tag}
                     variant="outline"
-                    className="text-xs"
+                    className="text-[10px] px-1.5 py-0.5"
                     aria-label={`Etiqueta: ${tag}`}
                   >
                     {tag}
                   </Badge>
                 ))}
+                {event.tags.length > 3 && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0.5">
+                    +{event.tags.length - 3}
+                  </Badge>
+                )}
               </div>
             )}
 
@@ -173,12 +178,12 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
                 <Button
                   variant="destructive"
                   size="sm"
-                  className="w-full gap-2"
+                  className="w-full gap-2 text-xs h-8"
                   onClick={handleDelete}
                   disabled={isDeleting}
                   aria-label={`Eliminar evento: ${event.title}`}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3 w-3" />
                   Eliminar
                 </Button>
               </div>
