@@ -55,8 +55,8 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
       aria-label={`Ver detalles del evento: ${event.title}`}
     >
       <article className="relative flex flex-col h-full overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-        {/* Image section - only show if flyer exists */}
-        {event.flyerUrl && (
+        {/* Image section - always show (with placeholder if no flyer) */}
+        {event.flyerUrl ? (
           <div className="h-[240px] bg-muted relative overflow-hidden shrink-0">
             <Image
               src={event.flyerUrl}
@@ -94,13 +94,11 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
               </div>
             )}
           </div>
-        )}
-
-        {/* Content section */}
-        <div className="p-4 flex flex-col flex-1 overflow-hidden">
-          {/* Category Badge - Show here if no flyer */}
-          {!event.flyerUrl && (
-            <div className="mb-3 shrink-0">
+        ) : (
+          /* Placeholder for cards without flyer */
+          <div className="h-[240px] bg-gradient-to-br from-primary/10 via-primary/5 to-secondary/10 relative shrink-0 flex items-center justify-center">
+            {/* Category Badge */}
+            <div className="absolute top-3 left-3">
               <Badge
                 className={CATEGORY_COLORS[event.category]}
                 variant="secondary"
@@ -109,8 +107,33 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
                 {event.category}
               </Badge>
             </div>
-          )}
 
+            {/* Placeholder icon */}
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center ${CATEGORY_COLORS[event.category] ? CATEGORY_COLORS[event.category].replace('bg-', 'bg-').replace('text-', 'text-') : 'bg-primary/20 text-primary'}`}>
+              <Calendar className="h-10 w-10" />
+            </div>
+
+            {/* Delete Button - Only for creator */}
+            {isOwner && (
+              <div className="absolute top-3 right-3">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  aria-label={`Eliminar evento: ${event.title}`}
+                  title={`Eliminar evento: ${event.title}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Content section */}
+        <div className="p-4 flex flex-col flex-1 overflow-hidden">
           <div className="flex flex-col flex-1 space-y-2.5 overflow-hidden">
             {/* Event Title */}
             <h3 className="font-semibold text-lg leading-tight line-clamp-2 shrink-0" id={`event-title-${event.id}`}>
@@ -164,23 +187,6 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
                     {tag}
                   </Badge>
                 ))}
-              </div>
-            )}
-
-            {/* Delete Button - Show here if no flyer */}
-            {isOwner && !event.flyerUrl && (
-              <div className="pt-2 shrink-0">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="w-full gap-2"
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  aria-label={`Eliminar evento: ${event.title}`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Eliminar
-                </Button>
               </div>
             )}
           </div>
