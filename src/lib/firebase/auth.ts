@@ -1,81 +1,105 @@
-// Firebase authentication utilities
+import { signInWithPopup, signOut, onAuthStateChanged, User, GoogleAuthProvider } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './client';
-import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, User } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 
-export interface User {
-  id: string;
+export interface UserProfile {
+  uid: string;
   email: string;
   displayName?: string;
   photoURL?: string;
-  createdAt?: Date;
+  bio?: string;
+  location?: string;
+  website?: string;
+  eventsCreated?: string[];
+  eventsAttending?: string[];
+  banned?: boolean;
+  role?: 'user' | 'admin';
+  createdAt?: any;
+  updatedAt?: any;
 }
 
-export const signUp = async (email: string, password: string, displayName?: string) => {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+const googleProvider = new GoogleAuthProvider();
 
-    // Update profile with display name if provided
-    if (displayName) {
-      await updateProfile(user, { displayName });
+export const signInWithGoogle = async (): Promise<UserProfile> => {
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    const user = result.user;
+    
+    // Crear o actualizar el perfil del usuario en Firestore
+    const userRef = doc(db, 'users', user.uid);
+    const userDoc = await getDoc(userRef);
+    
+    const userProfile: UserProfile = {
+      uid: user.uid,
+      email: user.email!,
+      displayName: user.displayName || user.email!.split('@')[0],
+      photoURL: user.photoURL || undefined,
+      bio: 'Amante de los eventos y las buenas experiencias.',
+      eventsCreated: [],
+      eventsAttending: [],
+      banned: false, // Usuario no baneado por defecto
+      role: 'user', // Rol por defecto
+      createdAt: userDoc.exists() ? userDoc.data().createdAt : new Date(),
+      updatedAt: new Date(),
+    };
+    
+    if (!userDoc.exists()) {
+      await setDoc(userRef, userProfile);
+    } else {
+      // Asegurar que el campo banned esté establecido en false para usuarios existentes
+      const existingData = userDoc.data();
+      const updatedProfile = {
+        ...userProfile,
+        banned: false, // Siempre asegurar que no esté baneado
+        role: existingData.role || 'user', // Mantener rol existente o asignar 'user'
+      };
+      await setDoc(userRef, updatedProfile, { merge: true });
     }
-
-    // Create user document in Firestore
-    await setDoc(doc(db, 'users', user.uid), {
-      uid: user.uid,
-      email: user.email,
-      displayName: displayName || user.displayName || '',
-      photoURL: user.photoURL || '',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-
-    return user;
-  } catch (error: unknown) {
-    throw new Error((error as Error).message);
+    
+    return userProfile;
+  } catch (error) {
+    console.error('Error signing in with Google:', error);
+    throw new Error('No se pudo iniciar sesión con Google');
   }
 };
 
-export const signIn = async (email: string, password: string) => {
+export const logoutUser = async (): Promise<void> => {
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
-  } catch (error: unknown) {
-    throw new Error((error as Error).message);
+    await signOut(auth);
+  } catch (error) {
+    console.error('Error signing out:', error);
+    throw new Error('No se pudo cerrar sesión');
   }
 };
 
-export const signOut = async () => {
+export const onAuthStateChange = (callback: (user: User | null) => void) => {
+  return onAuthStateChanged(auth, callback);
+};
+
+export const getUserProfile = async (uid: string): Promise<UserProfile | null> => {
   try {
-    await auth.signOut();
-  } catch (error: unknown) {
-    throw new Error((error as Error).message);
+    const userRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userRef);
+    
+    if (userDoc.exists()) {
+      return userDoc.data() as UserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    throw new Error('No se pudo obtener el perfil del usuario');
   }
 };
 
-// Create or update user document (useful for Google sign-in)
-export const createOrUpdateUserDocument = async (user: User) => {
-  const userRef = doc(db, 'users', user.uid);
-  const userSnapshot = await getDoc(userRef);
-
-  if (!userSnapshot.exists()) {
-    // Create new user document
+export const updateUserProfile = async (uid: string, updates: Partial<UserProfile>): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', uid);
     await setDoc(userRef, {
-      uid: user.uid,
-      email: user.email,
-      displayName: user.displayName || '',
-      photoURL: user.photoURL || '',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-  } else {
-    // Update existing user document
-    await setDoc(userRef, {
-      ...userSnapshot.data(),
-      displayName: user.displayName || userSnapshot.data().displayName,
-      photoURL: user.photoURL || userSnapshot.data().photoURL,
-      updatedAt: serverTimestamp(),
+      ...updates,
+      updatedAt: new Date(),
     }, { merge: true });
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw new Error('No se pudo actualizar el perfil del usuario');
   }
 };
