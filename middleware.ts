@@ -3,7 +3,6 @@ import type { NextRequest } from 'next/server'
 
 // Rutas que requieren autenticación
 const PROTECTED_ROUTES = [
-  '/crear',
   '/profile',
   '/notificaciones',
   '/analytics',
@@ -12,7 +11,6 @@ const PROTECTED_ROUTES = [
 
 // Rutas que requieren verificación de email
 const REQUIRE_EMAIL_VERIFICATION = [
-  '/crear',
   '/admin',
 ]
 
