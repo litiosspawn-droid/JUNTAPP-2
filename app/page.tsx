@@ -6,43 +6,21 @@ import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { Header, Footer } from "@/components/layout"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Skeleton, SkeletonCard } from "@/components/ui/skeleton"
-import { EmptyPreset } from "@/components/ui/empty"
+import { Skeleton } from "@/components/ui/skeleton"
+import { EmptyPreset } from '@/components/ui/empty'
 import { CATEGORIES, CATEGORY_COLORS, type Category } from "@/lib/firebase/events"
 import { useEvents } from '@/hooks/use-events'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGeolocation } from '@/hooks/use-geolocation'
 import { usePullToRefresh, PullToRefreshContainer } from '@/components/ui/pull-to-refresh'
 import { useUnifiedToast } from '@/hooks/use-unified-toast'
-import { VirtualGrid } from '@/components/ui/virtual-grid'
 import { AdvancedFilters } from '@/components/advanced-filters'
 import { useAdvancedSearch } from '@/hooks/use-advanced-search'
 import { FadeIn, SlideIn, Stagger } from '@/components/ui/animations'
 import { OnboardingModal } from '@/components/onboarding-modal'
-import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar, Star, Search, LogIn, RefreshCcw, AlertCircle, Zap, Heart, Clock } from 'lucide-react'
+import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar, Star } from 'lucide-react'
 import { ErrorBoundary } from '@/components/error-boundary'
-
-// Lazy load heavy components
-const EventCard = dynamic(() => import("@/components/event-card").then((mod) => mod.EventCard), {
-  loading: () => (
-    <Card className="overflow-hidden">
-      <div className="aspect-[16/10] bg-muted animate-pulse" />
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          <div className="h-4 bg-muted rounded animate-pulse" />
-          <div className="h-3 bg-muted rounded w-3/4 animate-pulse" />
-          <div className="flex gap-2">
-            <div className="h-6 w-16 bg-muted rounded-full animate-pulse" />
-            <div className="h-6 w-20 bg-muted rounded-full animate-pulse" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  ),
-})
 
 const MapView = dynamic(() => import("@/components/map-view").then((mod) => mod.MapView), {
   ssr: false,
@@ -488,115 +466,25 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Events Grid */}
+        {/* Ver todos los eventos button */}
         <section className="py-12">
           <div className="container mx-auto px-4">
-            <div className="mb-8 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div>
-                  <h2 className="text-3xl font-bold text-foreground mb-2">
-                    {eventsLoading ? "Cargando eventos..." :
-                     searchQuery ? `Resultados para "${searchQuery}"` :
-                     activeCategoryFilter ? `Eventos de ${activeCategoryFilter}` :
-                     "Todos los eventos"}
-                  </h2>
-                  <p className="text-muted-foreground">
-                    {!eventsLoading && `${filteredEvents.length} evento${filteredEvents.length !== 1 ? 's' : ''} encontrado${filteredEvents.length !== 1 ? 's' : ''}`}
-                  </p>
-                </div>
-                
-                {/* Pull-to-refresh indicator para desktop */}
-                {!isMobile && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleRefresh}
-                    disabled={eventsLoading}
-                    className="shrink-0"
-                    title="Actualizar eventos"
-                  >
-                    <RefreshCcw className={`h-5 w-5 ${eventsLoading ? 'animate-spin' : ''}`} />
-                  </Button>
-                )}
+            <div className="flex flex-col items-center justify-center gap-6 py-8">
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold text-foreground">
+                  ¿Querés ver más eventos?
+                </h2>
+                <p className="text-muted-foreground">
+                  Explorá el listado completo de todos los eventos disponibles
+                </p>
               </div>
-
-              {user && (
-                <Link href="/crear">
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Crear Evento
-                  </Button>
-                </Link>
-              )}
-            </div>
-
-            {/* Loading state con Skeletons */}
-            {eventsLoading ? (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {[...Array(8)].map((_, i) => (
-                  <SkeletonCard key={i} />
-                ))}
-              </div>
-            ) : filteredEvents.length > 0 ? (
-              <PullToRefreshContainer
-                onRefresh={handleRefresh}
-                enabled={isMobile}
-                threshold={100}
-              >
-                {/* Virtual Grid para listas largas */}
-                <VirtualGrid
-                  items={filteredEvents}
-                  itemHeight={280}
-                  columns={isMobile ? 1 : window.innerWidth >= 1280 ? 4 : window.innerWidth >= 768 ? 2 : 3}
-                  gap={24}
-                  enabled={filteredEvents.length > 20}
-                  renderItem={(event) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
-                      onDelete={refetch}
-                    />
-                  )}
-                  itemKey={(event) => event.id}
-                  className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                />
-              </PullToRefreshContainer>
-            ) : null}
-
-            {/* Empty state mejorado */}
-            {!eventsLoading && filteredEvents.length === 0 && (
-              <EmptyPreset
-                preset={searchQuery ? 'no-results' : activeCategoryFilter ? 'no-data' : 'no-events'}
-                title={
-                  searchQuery ? `No se encontraron resultados para "${searchQuery}"` :
-                  activeCategoryFilter ? `No hay eventos de ${activeCategoryFilter}` :
-                  undefined
-                }
-                description={
-                  searchQuery ? "Prueba con otros términos de búsqueda o quitá los filtros para ver más eventos." :
-                  activeCategoryFilter ? `No se encontraron eventos en la categoría "${activeCategoryFilter}".` :
-                  undefined
-                }
-                actionLabel={user ? 'Crear evento' : undefined}
-                onAction={() => router.push('/crear')}
-                className="mx-auto max-w-md"
-              />
-            )}
-            
-            {/* Error state */}
-            {error && !eventsLoading && (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="h-24 w-24 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center mb-6">
-                  <AlertCircle className="h-12 w-12 text-red-500" />
-                </div>
-                <h3 className="text-2xl font-semibold mb-2">Error al cargar eventos</h3>
-                <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
-                <Button onClick={refetch} className="gap-2">
-                  <RefreshCcw className="h-4 w-4" />
-                  Reintentar
+              <Link href="/eventos">
+                <Button size="lg" className="gap-2 px-8">
+                  <MapPin className="h-5 w-5" />
+                  Ver todos los eventos
                 </Button>
-              </div>
-            )}
+              </Link>
+            </div>
           </div>
         </section>
       </main>
