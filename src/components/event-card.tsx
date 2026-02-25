@@ -51,13 +51,13 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
   return (
     <Link
       href={`/events/${event.id}`}
-      className="block group overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      className="block group h-full"
       aria-label={`Ver detalles del evento: ${event.title}`}
     >
-      <article className="relative">
+      <article className="relative flex flex-col h-full overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
         {/* Image section - only show if flyer exists */}
         {event.flyerUrl && (
-          <div className="aspect-[16/10] bg-muted relative overflow-hidden">
+          <div className="aspect-[16/10] bg-muted relative overflow-hidden shrink-0">
             <Image
               src={event.flyerUrl}
               alt={`Imagen promocional del evento: ${event.title}`}
@@ -97,10 +97,10 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
         )}
 
         {/* Content section */}
-        <div className={event.flyerUrl ? "p-4" : "p-4"}>
+        <div className="p-4 flex flex-col flex-1">
           {/* Category Badge - Show here if no flyer */}
           {!event.flyerUrl && (
-            <div className="mb-3">
+            <div className="mb-3 shrink-0">
               <Badge
                 className={CATEGORY_COLORS[event.category]}
                 variant="secondary"
@@ -111,19 +111,19 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
             </div>
           )}
 
-          <div className="space-y-3">
+          <div className="flex flex-col flex-1 space-y-3">
             {/* Event Title */}
-            <h3 className="font-semibold text-lg leading-tight line-clamp-2" id={`event-title-${event.id}`}>
+            <h3 className="font-semibold text-lg leading-tight line-clamp-2 shrink-0" id={`event-title-${event.id}`}>
               {event.title}
             </h3>
 
             {/* Event Description */}
-            <p className="text-sm text-muted-foreground line-clamp-2" aria-describedby={`event-title-${event.id}`}>
+            <p className="text-sm text-muted-foreground line-clamp-2 shrink-0" aria-describedby={`event-title-${event.id}`}>
               {event.description}
             </p>
 
             {/* Event Details */}
-            <div className="space-y-2 text-sm text-muted-foreground">
+            <div className="space-y-2 text-sm text-muted-foreground shrink-0">
               {/* Date and Time */}
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -151,9 +151,9 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
               </div>
             </div>
 
-            {/* Tags */}
+            {/* Tags - Push to bottom */}
             {event.tags && Array.isArray(event.tags) && event.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1.5 mt-auto shrink-0">
                 {event.tags.map((tag) => (
                   <Badge
                     key={tag}
@@ -169,7 +169,7 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
 
             {/* Delete Button - Show here if no flyer */}
             {isOwner && !event.flyerUrl && (
-              <div className="pt-2">
+              <div className="pt-2 shrink-0">
                 <Button
                   variant="destructive"
                   size="sm"

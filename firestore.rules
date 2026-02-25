@@ -2,29 +2,26 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // Helper functions
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
+
     function isAdmin() {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-    
+
     function isNotBanned() {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.banned == false;
-    }
-    
-    function canAccessEvent(eventId) {
-      return isOwner(get(/databases/$(database)/documents/events/$(eventId).data.creatorId)) ||
-             isAdmin();
     }
     
     // Users collection
@@ -75,13 +72,12 @@ service cloud.firestore {
                      request.resource.data.keys().hasAll(['text', 'type', 'timestamp', 'userId', 'eventId']) &&
                      request.resource.data.type in ['TEXT', 'IMAGE'] &&
                      // Verificar que el evento exista
-                     get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.id != null;
-        allow update: if isOwner(get(/databases/$(database)/documents/chats/$(chatId)/messages/$(messageId).data.userId)) ||
-                     isAdmin();
-        allow delete: if isOwner(get(/databases/$(database)/documents/chats/$(chatId)/messages/$(messageId).data.userId)) ||
-                     isAdmin() ||
-                     // El creador del evento puede eliminar mensajes
-                     request.auth.uid == get(/databases/$(database)/documents/events/$(chatId)).data.creatorId;
+                     exists(/databases/$(database)/documents/events/$(request.resource.data.eventId));
+        allow update: if isAuthenticated() &&
+                     (isOwner(resource.data.userId) || isAdmin());
+        allow delete: if isAuthenticated() &&
+                     (isOwner(resource.data.userId) || isAdmin() ||
+                      request.auth.uid == resource.data.creatorId);
       }
     }
     
