@@ -229,7 +229,7 @@ export const createEvent = async (eventData: Omit<Event, 'id' | 'createdAt' | 'u
     console.log('Event to save:', JSON.stringify(eventToSave, null, 2));
 
     // Verificar que todos los campos requeridos estén presentes
-    const requiredFields = ['title', 'description', 'category', 'address', 'date', 'creatorId', 'createdBy'] as const;
+    const requiredFields = ['title', 'description', 'category', 'address', 'date', 'creatorId', 'createdBy', 'lat', 'lng'] as const;
     const missingFields = requiredFields.filter(field => !(field in eventToSave) || eventToSave[field as keyof typeof eventToSave] === undefined || eventToSave[field as keyof typeof eventToSave] === null);
 
     if (missingFields.length > 0) {
@@ -237,7 +237,16 @@ export const createEvent = async (eventData: Omit<Event, 'id' | 'createdAt' | 'u
       throw new Error(`Campos requeridos faltantes: ${missingFields.join(', ')}`);
     }
 
-    console.log('✅ All required fields present');
+    // Verificar que las coordenadas sean válidas
+    if (typeof eventToSave.lat !== 'number' || typeof eventToSave.lng !== 'number' || 
+        isNaN(eventToSave.lat) || isNaN(eventToSave.lng) ||
+        eventToSave.lat < -90 || eventToSave.lat > 90 ||
+        eventToSave.lng < -180 || eventToSave.lng > 180) {
+      console.error('❌ ERROR: Invalid coordinates:', { lat: eventToSave.lat, lng: eventToSave.lng });
+      throw new Error('Coordenadas inválidas. Por favor, seleccioná una ubicación en el mapa.');
+    }
+
+    console.log('✅ All required fields present. Coordinates valid:', { lat: eventToSave.lat, lng: eventToSave.lng });
 
     const docRef = await addDoc(collection(db, EVENTS_COLLECTION), eventToSave);
     console.log('✅ Event created successfully with ID:', docRef.id);
