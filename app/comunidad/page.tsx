@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { withAuth } from '@/hoc/withAuth'
 import { Header, Footer } from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,7 +13,7 @@ import { EventCard } from '@/components/event-card'
 import { Search, Users, Calendar, MapPin, Globe, Trophy } from "lucide-react"
 import { getAllUsers, getAllEvents, type UserProfile, type Event } from '@/lib/firebase/community'
 
-export default function ComunidadPage() {
+function ComunidadPageContent() {
   const [users, setUsers] = useState<UserProfile[]>([])
   const [allEvents, setAllEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
@@ -331,3 +332,6 @@ export default function ComunidadPage() {
     </div>
   )
 }
+
+// Proteger ruta: requiere autenticación
+export default withAuth(ComunidadPageContent);

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { withAuth } from '@/hoc/withAuth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -108,7 +109,7 @@ const mockAnalytics = {
   }
 }
 
-export default function AnalyticsDashboard() {
+function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d')
   const [loading, setLoading] = useState(false)
 
@@ -482,3 +483,6 @@ export default function AnalyticsDashboard() {
     </div>
   )
 }
+
+// Proteger ruta: requiere autenticación
+export default withAuth(AnalyticsPage);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { withAdmin } from '@/hoc/withAuth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -46,7 +47,7 @@ interface AdminUser {
   lastLogin?: Date
 }
 
-export default function AdminPanel() {
+function AdminPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [stats, setStats] = useState<AdminStats | null>(null)
@@ -547,3 +548,6 @@ export default function AdminPanel() {
     </div>
   )
 }
+
+// Proteger ruta: solo admins
+export default withAdmin(AdminPage);

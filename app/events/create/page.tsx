@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { withAuth } from '@/hoc/withAuth';
 import { db } from '@/lib/firebase/client';
 import { collection, addDoc, serverTimestamp, GeoPoint } from 'firebase/firestore';
 import { geohashForLocation } from 'geofire-common';
@@ -12,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import ImageUpload from '@/components/events/ImageUpload';
 
-export default function CreateEventPage() {
+function CreateEventPageContent() {
   const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -162,3 +163,8 @@ export default function CreateEventPage() {
     </div>
   );
 }
+
+// Proteger ruta: requiere autenticación y email verificado
+export default withAuth(CreateEventPageContent, {
+  requireEmailVerification: true,
+});
