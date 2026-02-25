@@ -8,7 +8,6 @@ const PROTECTED_ROUTES = [
   '/notificaciones',
   '/analytics',
   '/admin',
-  '/comunidad',
 ]
 
 // Rutas que requieren verificación de email
