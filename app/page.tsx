@@ -18,6 +18,8 @@ import { useGeolocation } from '@/hooks/use-geolocation'
 import { usePullToRefresh, PullToRefreshContainer } from '@/components/ui/pull-to-refresh'
 import { useUnifiedToast } from '@/hooks/use-unified-toast'
 import { VirtualGrid } from '@/components/ui/virtual-grid'
+import { AdvancedFilters } from '@/components/advanced-filters'
+import { useAdvancedSearch } from '@/hooks/use-advanced-search'
 import { FadeIn, SlideIn, Stagger } from '@/components/ui/animations'
 import { OnboardingModal } from '@/components/onboarding-modal'
 import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar, Star, Search, LogIn, RefreshCcw, AlertCircle, Zap, Heart, Clock } from 'lucide-react'
@@ -76,14 +78,14 @@ export default function HomePage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const toast = useUnifiedToast()
-  const [activeFilter, setActiveFilter] = useState<Category | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const { events, loading: eventsLoading, error, refetch } = useEvents(activeFilter || undefined)
+  const { events, loading: eventsLoading, error, refetch } = useEvents()
   const { position: userLocation, loading: locationLoading, error: locationError, requestLocation } = useGeolocation()
 
   // Estado para controlar si hemos intentado obtener ubicación
   const [hasRequestedLocation, setHasRequestedLocation] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [activeCategoryFilter, setActiveCategoryFilter] = useState<Category | null>(null)
 
   // Detectar dispositivo móvil
   useEffect(() => {
@@ -94,6 +96,25 @@ export default function HomePage() {
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  // Usar búsqueda avanzada
+  const {
+    filteredEvents,
+    setFilters,
+    resetFilters,
+    hasActiveFilters,
+  } = useAdvancedSearch({
+    userLocation: userLocation || undefined,
+  })
+
+  // Sincronizar filtros con búsqueda avanzada
+  useEffect(() => {
+    setFilters({
+      query: searchQuery || undefined,
+      category: activeCategoryFilter || undefined,
+      userLocation: userLocation || undefined,
+    })
+  }, [searchQuery, activeCategoryFilter, userLocation])
 
   // Pull-to-refresh handler
   const handleRefresh = async () => {
@@ -140,25 +161,7 @@ export default function HomePage() {
     }
   }, [events, eventsLoading, error])
 
-  // Filtrar eventos por búsqueda
-  const filteredEvents = useMemo(() => {
-    let filtered = activeFilter
-      ? events.filter((e) => e.category === activeFilter)
-      : events
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(event =>
-        event.title.toLowerCase().includes(query) ||
-        event.description.toLowerCase().includes(query) ||
-        event.address.toLowerCase().includes(query)
-      )
-    }
-
-    return filtered
-  }, [events, activeFilter, searchQuery])
-
-  // Eventos destacados (últimos 3 más próximos)
+  // Eventos destacados (últimos 3 más próximos) - SIN FILTROS
   const featuredEvents = useMemo(() => {
     return events
       .filter(event => new Date(event.date) >= new Date())
@@ -395,66 +398,21 @@ export default function HomePage() {
         <section className="py-8 border-b bg-card/50">
           <div className="container mx-auto px-4">
             <FadeIn>
-              <div className="max-w-4xl mx-auto space-y-6">
-                {/* Search Bar */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar eventos por nombre, descripción o ubicación..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-12 text-base"
-                  />
-                  {searchQuery && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 -translate-y-1/2"
-                      onClick={() => setSearchQuery("")}
-                    >
-                      ✕
-                    </Button>
-                  )}
-                </div>
-
-                {/* Category Filters */}
-                <Stagger staggerDelay={50}>
-                  <div className="flex items-center gap-2 overflow-x-auto pb-2">
-                    <Button
-                      variant={activeFilter === null ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setActiveFilter(null)}
-                      className="gap-2 shrink-0"
-                      disabled={loading}
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      Todos
-                    </Button>
-                    {CATEGORIES.map((cat) => {
-                      const IconComponent = CATEGORY_ICON_MAP[cat]
-                      return (
-                        <Button
-                          key={cat}
-                          variant={activeFilter === cat ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setActiveFilter(activeFilter === cat ? null : cat)}
-                          className="gap-2 shrink-0"
-                          disabled={loading}
-                        >
-                          <IconComponent className="h-4 w-4" />
-                          {cat}
-                        </Button>
-                      )
-                    })}
-                  </div>
-                </Stagger>
+              <div className="max-w-4xl mx-auto">
+                <AdvancedFilters
+                  onSearchChange={setSearchQuery}
+                  onCategoryChange={setActiveCategoryFilter}
+                  onReset={resetFilters}
+                  hasActiveFilters={hasActiveFilters}
+                  userLocation={userLocation}
+                />
               </div>
             </FadeIn>
           </div>
         </section>
 
         {/* Featured Events Section */}
-        {featuredEvents.length > 0 && !searchQuery && !activeFilter && (
+        {featuredEvents.length > 0 && !searchQuery && !activeCategoryFilter && (
           <section className="py-12">
             <div className="container mx-auto px-4">
               <div className="flex items-center gap-2 mb-8">
@@ -536,7 +494,7 @@ export default function HomePage() {
                   <h2 className="text-3xl font-bold text-foreground mb-2">
                     {eventsLoading ? "Cargando eventos..." :
                      searchQuery ? `Resultados para "${searchQuery}"` :
-                     activeFilter ? `Eventos de ${activeFilter}` :
+                     activeCategoryFilter ? `Eventos de ${activeCategoryFilter}` :
                      "Todos los eventos"}
                   </h2>
                   <p className="text-muted-foreground">
@@ -605,15 +563,15 @@ export default function HomePage() {
             {/* Empty state mejorado */}
             {!eventsLoading && filteredEvents.length === 0 && (
               <EmptyPreset
-                preset={searchQuery ? 'no-results' : activeFilter ? 'no-data' : 'no-events'}
+                preset={searchQuery ? 'no-results' : activeCategoryFilter ? 'no-data' : 'no-events'}
                 title={
                   searchQuery ? `No se encontraron resultados para "${searchQuery}"` :
-                  activeFilter ? `No hay eventos de ${activeFilter}` :
+                  activeCategoryFilter ? `No hay eventos de ${activeCategoryFilter}` :
                   undefined
                 }
                 description={
-                  searchQuery ? "Prueba con otros términos de búsqueda o quita los filtros para ver más eventos." :
-                  activeFilter ? `No se encontraron eventos en la categoría "${activeFilter}".` :
+                  searchQuery ? "Prueba con otros términos de búsqueda o quitá los filtros para ver más eventos." :
+                  activeCategoryFilter ? `No se encontraron eventos en la categoría "${activeCategoryFilter}".` :
                   undefined
                 }
                 actionLabel={user ? 'Crear evento' : undefined}

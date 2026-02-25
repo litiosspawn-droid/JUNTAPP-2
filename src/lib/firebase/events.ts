@@ -26,15 +26,24 @@ export interface Event {
   tags?: string[];
   date: string;
   time: string;
+  endDate?: string; // Para eventos recurrentes
+  endTime?: string;
   address: string;
   lat: number;
   lng: number;
   description: string;
   attendees: number;
+  maxAttendees?: number; // Límite de cupo
   flyerUrl: string;
   createdBy?: string;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  // Nuevos campos para características críticas
+  isRecurring?: boolean; // Evento recurrente
+  recurrencePattern?: 'weekly' | 'monthly' | 'custom';
+  isPrivate?: boolean; // Evento privado
+  status?: 'active' | 'cancelled' | 'completed'; // Estado del evento
+  viewCount?: number; // Para analytics
 }
 
 export const CATEGORIES: Category[] = [
