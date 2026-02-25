@@ -27,7 +27,8 @@ import {
   Circle,
   AlertCircle,
   Edit,
-  Trash2
+  Trash2,
+  ZoomIn
 } from 'lucide-react';
 import { CATEGORY_COLORS } from '@/lib/firebase/events';
 
@@ -57,6 +58,7 @@ export default function EventPage() {
   const [error, setError] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [isCreator, setIsCreator] = useState(false);
+  const [showFullImage, setShowFullImage] = useState(false);
 
   const {
     attendees,
@@ -275,12 +277,12 @@ export default function EventPage() {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/50">
       {/* Hero Section with Flyer */}
       {event.flyerUrl && (
-        <div className="relative h-64 md:h-80 lg:h-96 w-full overflow-hidden">
+        <div className="relative h-64 md:h-80 lg:h-96 w-full overflow-hidden group cursor-pointer" onClick={() => setShowFullImage(true)}>
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent z-10" />
           <img
             src={event.flyerUrl}
             alt={event.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
           <div className="absolute bottom-0 left-0 right-0 p-6 z-20">
             <div className="container mx-auto max-w-6xl">
@@ -291,6 +293,22 @@ export default function EventPage() {
                 {event.title}
               </h1>
             </div>
+          </div>
+          
+          {/* Ver flyer completo button */}
+          <div className="absolute top-4 right-4 z-30">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-2 bg-white/90 hover:bg-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowFullImage(true);
+              }}
+            >
+              <ZoomIn className="h-4 w-4" />
+              Ver imagen completa
+            </Button>
           </div>
         </div>
       )}
@@ -549,6 +567,31 @@ export default function EventPage() {
           </div>
         </div>
       </div>
+
+      {/* Full Image Modal */}
+      {showFullImage && event.flyerUrl && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowFullImage(false)}
+        >
+          <div className="relative max-w-5xl max-h-[90vh]">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowFullImage(false)}
+              className="absolute -top-12 right-0 text-white hover:bg-white/20"
+            >
+              <ArrowLeft className="h-6 w-6 rotate-45" />
+            </Button>
+            <img
+              src={event.flyerUrl}
+              alt={event.title}
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

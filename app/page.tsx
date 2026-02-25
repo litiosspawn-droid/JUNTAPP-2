@@ -307,8 +307,8 @@ export default function HomePage() {
               <SlideIn direction="right" delay={400}>
                 <div className="relative">
                   {/* Eventos esta semana badge - arriba del mapa */}
-                  <div className="absolute -top-3 left-4 z-20">
-                    <div className="bg-card rounded-lg p-3 shadow-lg border flex items-center gap-2">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+                    <div className="bg-card rounded-lg p-3 shadow-lg border flex items-center gap-2 whitespace-nowrap">
                       <TrendingUp className="h-4 w-4 text-green-500" />
                       <span className="text-sm font-medium">{homepageStats.upcomingEvents} eventos esta semana</span>
                     </div>
@@ -423,63 +423,65 @@ export default function HomePage() {
 
               <div className="grid gap-6 md:grid-cols-3">
                 {featuredEvents.map((event, index) => (
-                  <Card key={event.id} className={`group cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 ${index === 0 ? 'md:col-span-2' : ''}`}>
-                    {event.flyerUrl ? (
-                      <div className={`relative ${index === 0 ? 'aspect-[16/9]' : 'aspect-[4/3]'} overflow-hidden rounded-t-lg`}>
-                        <img
-                          src={event.flyerUrl}
-                          alt={event.title}
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                        <div className="absolute top-3 left-3">
-                          <Badge className="bg-white/90 text-foreground hover:bg-white">
-                            {event.category}
-                          </Badge>
-                        </div>
-                        <div className="absolute top-3 right-3">
-                          <Badge variant="secondary" className="bg-black/50 text-white border-0">
-                            Próximo
-                          </Badge>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className={`relative ${index === 0 ? 'aspect-[16/9]' : 'aspect-[4/3]'} overflow-hidden rounded-t-lg bg-gradient-to-br from-primary/10 via-primary/5 to-secondary/10 border-b`}>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                          <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${CATEGORY_COLORS[event.category] ? CATEGORY_COLORS[event.category].replace('bg-', 'bg-').replace('text-', 'text-') : 'bg-primary/20 text-primary'}`}>
-                            <MapPin className="h-8 w-8" />
+                  <Link key={event.id} href={`/events/${event.id}`} className={`group cursor-pointer transition-all hover:shadow-lg hover:-translate-y-1 ${index === 0 ? 'md:col-span-2' : ''}`}>
+                    <Card className="h-full overflow-hidden">
+                      {event.flyerUrl ? (
+                        <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg">
+                          <img
+                            src={event.flyerUrl}
+                            alt={event.title}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <div className="absolute top-3 left-3">
+                            <Badge className="bg-white/90 text-foreground hover:bg-white">
+                              {event.category}
+                            </Badge>
                           </div>
-                          <Badge className="bg-white/90 text-foreground hover:bg-white mb-2">
-                            {event.category}
-                          </Badge>
-                          <Badge variant="secondary" className="bg-black/50 text-white border-0">
-                            Próximo
-                          </Badge>
+                          <div className="absolute top-3 right-3">
+                            <Badge variant="secondary" className="bg-black/50 text-white border-0">
+                              Próximo
+                            </Badge>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold text-lg mb-2 line-clamp-2">{event.title}</h3>
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          <span>
-                            {new Date(event.date).toLocaleDateString("es-AR", {
-                              day: "numeric",
-                              month: "short",
-                            })} - {event.time}hs
-                          </span>
+                      ) : (
+                        <div className="relative aspect-[4/3] overflow-hidden rounded-t-lg bg-gradient-to-br from-primary/10 via-primary/5 to-secondary/10 border-b">
+                          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${CATEGORY_COLORS[event.category] ? CATEGORY_COLORS[event.category].replace('bg-', 'bg-').replace('text-', 'text-') : 'bg-primary/20 text-primary'}`}>
+                              <MapPin className="h-8 w-8" />
+                            </div>
+                            <Badge className="bg-white/90 text-foreground hover:bg-white mb-2">
+                              {event.category}
+                            </Badge>
+                            <Badge variant="secondary" className="bg-black/50 text-white border-0">
+                              Próximo
+                            </Badge>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <span className="truncate">{event.address}</span>
+                      )}
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold text-lg mb-2 line-clamp-2">{event.title}</h3>
+                        <div className="space-y-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            <span>
+                              {new Date(event.date).toLocaleDateString("es-AR", {
+                                day: "numeric",
+                                month: "short",
+                              })} - {event.time}hs
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            <span className="truncate">{event.address}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <UsersIcon className="h-4 w-4" />
+                            <span>{event.attendees} asistencias</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <UsersIcon className="h-4 w-4" />
-                          <span>{event.attendees} asistencias</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             </div>
