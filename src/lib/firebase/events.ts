@@ -26,7 +26,7 @@ export interface Event {
   tags?: string[];
   date: string;
   time: string;
-  endDate?: string; // Para eventos recurrentes
+  endDate?: string; // Para eventos recurrentes o de múltiples días
   endTime?: string;
   address: string;
   lat: number;
@@ -40,10 +40,20 @@ export interface Event {
   updatedAt?: Timestamp;
   // Nuevos campos para características críticas
   isRecurring?: boolean; // Evento recurrente
-  recurrencePattern?: 'weekly' | 'monthly' | 'custom';
+  recurrencePattern?: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
+  recurrenceEndDate?: string; // Fecha de fin de la recurrencia
+  recurrenceCount?: number; // Cantidad de repeticiones
+  parentEventId?: string; // ID del evento padre (para instancias recurrentes)
   isPrivate?: boolean; // Evento privado
   status?: 'active' | 'cancelled' | 'completed'; // Estado del evento
   viewCount?: number; // Para analytics
+}
+
+export interface RecurringEventConfig {
+  pattern: 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
+  endDate?: string;
+  count?: number;
+  excludeDates?: string[]; // Fechas a excluir (feriados, etc.)
 }
 
 export const CATEGORIES: Category[] = [
@@ -358,5 +368,172 @@ export const incrementAttendees = async (eventId: string): Promise<void> => {
   } catch (error) {
     console.error('Error incrementing attendees:', error);
     throw new Error('No se pudo incrementar la cantidad de asistentes');
+  }
+};
+
+/**
+ * Crear eventos recurrentes a partir de un evento padre
+ */
+export const createRecurringEvents = async (
+  parentEvent: Event,
+  config: RecurringEventConfig
+): Promise<string[]> => {
+  try {
+    const createdIds: string[] = [];
+    const startDate = new Date(parentEvent.date);
+    const endDate = config.endDate ? new Date(config.endDate) : null;
+    
+    let currentDate = new Date(startDate);
+    let count = 0;
+    const maxCount = config.count || 52; // Máximo 52 repeticiones por defecto
+
+    while (
+      (!endDate || currentDate <= endDate) &&
+      count < maxCount
+    ) {
+      // Saltar fecha de inicio (ya existe como evento padre)
+      if (currentDate.getTime() !== startDate.getTime()) {
+        // Verificar si la fecha está excluida
+        const dateStr = currentDate.toISOString().split('T')[0];
+        if (config.excludeDates?.includes(dateStr)) {
+          count++;
+          continue;
+        }
+
+        // Crear instancia del evento
+        const eventData: Omit<Event, 'id'> = {
+          ...parentEvent,
+          date: dateStr,
+          parentEventId: parentEvent.id,
+          isRecurring: true,
+          recurrencePattern: config.pattern,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+        };
+
+        const docRef = await addDoc(collection(db, 'events'), eventData);
+        createdIds.push(docRef.id);
+      }
+
+      // Avanzar a la siguiente fecha según el patrón
+      switch (config.pattern) {
+        case 'daily':
+          currentDate.setDate(currentDate.getDate() + 1);
+          break;
+        case 'weekly':
+          currentDate.setDate(currentDate.getDate() + 7);
+          break;
+        case 'biweekly':
+          currentDate.setDate(currentDate.getDate() + 14);
+          break;
+        case 'monthly':
+          currentDate.setMonth(currentDate.getMonth() + 1);
+          break;
+      }
+
+      count++;
+    }
+
+    // Actualizar evento padre con información de recurrencia
+    if (parentEvent.id) {
+      await updateDoc(doc(db, 'events', parentEvent.id), {
+        isRecurring: true,
+        recurrencePattern: config.pattern,
+        recurrenceEndDate: endDate?.toISOString().split('T')[0],
+        recurrenceCount: createdIds.length + 1, // Incluir el padre
+      });
+    }
+
+    return createdIds;
+  } catch (error) {
+    console.error('Error creating recurring events:', error);
+    throw new Error('No se pudieron crear los eventos recurrentes');
+  }
+};
+
+/**
+ * Obtener todas las instancias de un evento recurrente
+ */
+export const getRecurringEventInstances = async (parentEventId: string): Promise<Event[]> => {
+  try {
+    // Obtener evento padre
+    const parentDoc = await getDoc(doc(db, 'events', parentEventId));
+    if (!parentDoc.exists()) {
+      return [];
+    }
+
+    const parentEvent = { id: parentDoc.id, ...parentDoc.data() } as Event;
+
+    // Obtener instancias
+    const q = query(
+      collection(db, 'events'),
+      where('parentEventId', '==', parentEventId)
+    );
+    const querySnapshot = await getDocs(q);
+
+    const instances = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    } as Event));
+
+    // Incluir padre y ordenar por fecha
+    const allEvents = [parentEvent, ...instances];
+    allEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return allEvents;
+  } catch (error) {
+    console.error('Error getting recurring instances:', error);
+    return [];
+  }
+};
+
+/**
+ * Eliminar una instancia específica o todos los eventos recurrentes
+ */
+export const deleteRecurringInstance = async (
+  eventId: string,
+  userId: string,
+  deleteAll: boolean = false
+): Promise<void> => {
+  try {
+    const eventRef = doc(db, 'events', eventId);
+    const eventDoc = await getDoc(eventRef);
+
+    if (!eventDoc.exists()) {
+      throw new Error('Evento no encontrado');
+    }
+
+    const eventData = eventDoc.data();
+
+    // Verificar permisos
+    if (eventData.createdBy !== userId) {
+      throw new Error('No tienes permisos para eliminar este evento');
+    }
+
+    if (deleteAll && eventData.parentEventId) {
+      // Eliminar todas las instancias incluyendo el padre
+      const q = query(
+        collection(db, 'events'),
+        where('parentEventId', '==', eventData.parentEventId)
+      );
+      const querySnapshot = await getDocs(q);
+
+      const deletePromises = [
+        deleteDoc(eventRef),
+        deleteDoc(doc(db, 'events', eventData.parentEventId)),
+        ...querySnapshot.docs.map(doc => deleteDoc(doc.ref))
+      ];
+
+      await Promise.all(deletePromises);
+    } else if (deleteAll && !eventData.parentEventId && eventData.isRecurring) {
+      // Es el padre y quiere eliminar todos
+      await deleteEvent(eventId, userId);
+    } else {
+      // Eliminar solo esta instancia
+      await deleteDoc(eventRef);
+    }
+  } catch (error) {
+    console.error('Error deleting recurring instance:', error);
+    throw new Error('No se pudo eliminar el evento');
   }
 };

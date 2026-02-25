@@ -12,12 +12,18 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import ImageUpload from '@/components/events/ImageUpload';
+import { RecurrenceConfigForm, type RecurrenceConfig } from '@/components/create-event/recurrence-config';
+import { createRecurringEvents } from '@/lib/firebase/events';
 
 function CreateEventPageContent() {
   const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [flyerUrl, setFlyerUrl] = useState('');
+  const [recurrenceConfig, setRecurrenceConfig] = useState<RecurrenceConfig>({
+    isRecurring: false,
+    pattern: 'none',
+  });
   const [formData, setFormData] = useState({
     title: '',
     category: '',
@@ -55,20 +61,45 @@ function CreateEventPageContent() {
       // 3. Calcular geohash
       const geohash = geohashForLocation([coords.lat, coords.lng]);
 
-      // 4. Guardar en Firestore
-      await addDoc(collection(db, 'events'), {
+      // 4. Crear evento padre
+      const eventToSave = {
         title: formData.title,
         flyerUrl,
         category: formData.category,
-        date: dateTime,
+        date: formData.date,
+        time: formData.time,
         address: formData.address,
-        location: new GeoPoint(coords.lat, coords.lng), // GeoPoint
-        geohash, // string para búsquedas con geofirestore
+        lat: coords.lat,
+        lng: coords.lng,
+        location: new GeoPoint(coords.lat, coords.lng),
+        geohash,
         createdBy: user.uid,
+        creatorId: user.uid,
         createdAt: serverTimestamp(),
-        attendees: [], // inicialmente vacío
+        attendees: 0,
         attendeesCount: 0,
-      });
+        isRecurring: recurrenceConfig.isRecurring && recurrenceConfig.pattern !== 'none',
+        recurrencePattern: recurrenceConfig.pattern !== 'none' ? recurrenceConfig.pattern : undefined,
+        recurrenceEndDate: recurrenceConfig.endDate,
+        recurrenceCount: recurrenceConfig.count,
+      };
+
+      // 5. Guardar evento padre
+      const docRef = await addDoc(collection(db, 'events'), eventToSave);
+
+      // 6. Si es recurrente, crear instancias
+      if (recurrenceConfig.isRecurring && recurrenceConfig.pattern !== 'none') {
+        const parentEvent = {
+          id: docRef.id,
+          ...eventToSave,
+        };
+
+        await createRecurringEvents(parentEvent, {
+          pattern: recurrenceConfig.pattern as any,
+          endDate: recurrenceConfig.endDate,
+          count: recurrenceConfig.count,
+        });
+      }
 
       router.push('/'); // redirige a exploración
     } catch (err: any) {
@@ -151,6 +182,12 @@ function CreateEventPageContent() {
               />
               <p className="text-sm text-muted-foreground">Se geocodificará automáticamente al guardar</p>
             </div>
+
+            {/* Configuración de recurrencia */}
+            <RecurrenceConfigForm
+              value={recurrenceConfig}
+              onChange={setRecurrenceConfig}
+            />
 
             {error && <p className="text-red-500">{error}</p>}
 
