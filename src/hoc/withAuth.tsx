@@ -51,7 +51,6 @@ export function withAuth<P extends object>(
 
       const getUserRole = async () => {
         try {
-          // Timeout de 3 segundos para evitar bloqueos
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 3000);
 
@@ -99,8 +98,8 @@ export function withAuth<P extends object>(
       }
     }, [user, loading, isEmailVerified, requireEmailVerification, router, redirectUnverified, roleLoading, hasRedirected]);
 
-    // Mostrar loading mientras verifica autenticación
-    if (loading || roleLoading) {
+    // Mostrar loading mientras Firebase verifica el estado de autenticación
+    if (loading) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
           <Card className="w-full max-w-md">
@@ -115,7 +114,7 @@ export function withAuth<P extends object>(
       );
     }
 
-    // Si no está logueado, mostrar pantalla de acceso denegado
+    // Si no está logueado (después de que terminó el loading), mostrar pantalla de acceso
     if (!user) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
@@ -166,6 +165,7 @@ export function withAuth<P extends object>(
       );
     }
 
+    // Usuario autenticado - renderizar componente
     return <WrappedComponent {...props} />;
   };
 }

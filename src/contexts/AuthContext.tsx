@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    // Persistencia mejorada - esperar a que Firebase inicialice
+    // Suscribirse al estado de autenticación
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         setUser(user);
@@ -91,6 +91,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('Error in onAuthStateChanged:', error);
         setInitialized(true);
       } finally {
+        // Siempre terminar loading después de recibir el estado de auth
         setLoading(false);
       }
     });
