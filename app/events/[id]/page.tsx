@@ -9,19 +9,23 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyPreset } from '@/components/ui/empty';
 import { useParams } from 'next/navigation';
 import EventChat from '@/components/chat/EventChat';
 import { useAttendees } from '@/hooks/use-attendees';
-import { 
-  Calendar, 
-  MapPin, 
-  Users, 
-  Share2, 
-  User, 
-  Clock, 
+import { useUnifiedToast } from '@/hooks/use-unified-toast';
+import {
+  Calendar,
+  MapPin,
+  Users,
+  Share2,
+  User,
+  Clock,
   ArrowLeft,
   CheckCircle2,
-  Circle
+  Circle,
+  AlertCircle
 } from 'lucide-react';
 import { CATEGORY_COLORS } from '@/lib/firebase/events';
 
@@ -45,6 +49,7 @@ export default function EventPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+  const toast = useUnifiedToast();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -101,17 +106,27 @@ export default function EventPage() {
   const handleToggleAttendance = async () => {
     if (isAttending) {
       await cancelAttendance();
+      toast.success('Asistencia cancelada', {
+        description: 'Ya no estás confirmado para este evento',
+      });
     } else {
       await confirmAttendance();
+      toast.success('¡Asistencia confirmada!', {
+        description: 'Te has unido al evento exitosamente',
+      });
     }
   };
 
   const handleShare = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      alert('¡Enlace copiado al portapapeles!');
+      toast.success('Enlace copiado', {
+        description: 'El enlace del evento ha sido copiado al portapapeles',
+      });
     } catch {
-      alert('Error al copiar el enlace');
+      toast.error('Error al copiar', {
+        description: 'No se pudo copiar el enlace',
+      });
     }
   };
 
@@ -138,10 +153,66 @@ export default function EventPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
-        <div className="text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Cargando evento...</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/50">
+        {/* Hero skeleton */}
+        <div className="relative h-64 md:h-80 lg:h-96 w-full overflow-hidden bg-muted">
+          <Skeleton className="absolute inset-0 h-full w-full" />
+        </div>
+
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
+          <Button variant="ghost" className="mb-6 gap-2" disabled>
+            <ArrowLeft className="h-4 w-4" />
+            Volver
+          </Button>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content skeleton */}
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardContent className="p-6 md:p-8">
+                  <div className="space-y-4">
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-5 w-32" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-5 w-32" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-32" />
+                </CardHeader>
+                <CardContent className="h-64">
+                  <Skeleton className="h-full w-full" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Sidebar skeleton */}
+            <div className="space-y-6">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <Skeleton className="h-5 w-24" />
+                  </CardHeader>
+                  <CardContent className="h-20">
+                    <Skeleton className="h-full w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -150,17 +221,14 @@ export default function EventPage() {
   if (error || !event) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
-        <div className="text-center max-w-md px-4">
-          <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
-            <Circle className="h-8 w-8 text-destructive" />
-          </div>
-          <h1 className="text-2xl font-bold mb-2">Evento no encontrado</h1>
-          <p className="text-muted-foreground mb-6">{error || 'El evento que buscas no existe o ha sido eliminado.'}</p>
-          <Button onClick={() => router.push('/')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver al inicio
-          </Button>
-        </div>
+        <EmptyPreset
+          preset="no-data"
+          title="Evento no encontrado"
+          description={error || 'El evento que buscas no existe o ha sido eliminado.'}
+          actionLabel="Volver al inicio"
+          onAction={() => router.push('/')}
+          className="max-w-md"
+        />
       </div>
     );
   }

@@ -16,6 +16,8 @@ import { X, Upload, MapPin, Calendar, Clock, FileImage, AlertCircle, CheckCircle
 import { useAuth } from '@/contexts/AuthContext'
 import { createEvent, CATEGORIES, SUBCATEGORIES, POPULAR_TAGS, CATEGORY_DESCRIPTIONS, type Category } from '@/lib/firebase/events'
 import { useToast } from '@/hooks/use-toast'
+import { withAuth } from '@/hoc/withAuth'
+import { checkRateLimit, RATE_LIMITS, RateLimitError } from '@/lib/rate-limit'
 import dynamic from "next/dynamic"
 
 const MapView = dynamic(() => import("@/components/map-view").then((mod) => mod.MapView), {
@@ -48,7 +50,7 @@ interface ValidationState {
   touched: { [key: string]: boolean }
 }
 
-export default function CreateEventPage() {
+function CreateEventPageContent() {
   const router = useRouter()
   const { user } = useAuth()
   const { toast } = useToast()
@@ -240,6 +242,22 @@ export default function CreateEventPage() {
 
     if (!validation.isValid) {
       return
+    }
+
+    // Check rate limit
+    try {
+      if (user) {
+        checkRateLimit(user.uid, 'CREATE_EVENT', RATE_LIMITS.CREATE_EVENT);
+      }
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        toast({
+          title: 'Demasiados intentos',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     setLoading(true)
@@ -872,3 +890,6 @@ export default function CreateEventPage() {
     </div>
   )
 }
+
+// Proteger ruta: requiere autenticación y email verificado
+export default withAuth(CreateEventPageContent, { requireEmailVerification: true });

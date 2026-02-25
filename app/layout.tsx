@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ErrorBoundary } from '@/components/error-boundary'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { Toaster } from '@/components/ui/sonner'
 import 'leaflet/dist/leaflet.css'
 import './globals.css'
 
@@ -81,6 +82,7 @@ export default function RootLayout({
           <ErrorBoundary>
             <AuthProvider>{children}</AuthProvider>
           </ErrorBoundary>
+          <Toaster position="top-right" richColors closeButton />
         </ThemeProvider>
         <Analytics />
       </body>

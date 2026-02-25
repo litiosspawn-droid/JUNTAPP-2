@@ -16,8 +16,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { ArrowLeft, Upload, AlertCircle, CheckCircle, User } from 'lucide-react'
 import type { UserProfile } from '@/lib/firebase/auth'
 import { ProfilePhotoUpload } from '@/components/profile-photo-upload'
+import { withAuth } from '@/hoc/withAuth'
 
-export default function EditProfilePage() {
+function EditProfilePageContent() {
   const { user } = useAuth()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -344,3 +345,6 @@ export default function EditProfilePage() {
     </div>
   )
 }
+
+// Proteger ruta: requiere autenticación
+export default withAuth(EditProfilePageContent);

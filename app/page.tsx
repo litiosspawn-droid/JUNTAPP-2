@@ -2,17 +2,23 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import dynamic from "next/dynamic"
 import { Header, Footer } from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton, SkeletonCard } from "@/components/ui/skeleton"
+import { EmptyPreset } from "@/components/ui/empty"
 import { CATEGORIES, CATEGORY_COLORS, type Category } from "@/lib/firebase/events"
 import { useEvents } from '@/hooks/use-events'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGeolocation } from '@/hooks/use-geolocation'
-import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar, Star, Search } from 'lucide-react'
+import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
+import { PullToRefreshContainer } from '@/components/ui/pull-to-refresh'
+import { useUnifiedToast } from '@/hooks/use-unified-toast'
+import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar, Star, Search, LogIn, RefreshCcw, AlertCircle } from 'lucide-react'
 import { ErrorBoundary } from '@/components/error-boundary'
 
 // Lazy load heavy components
@@ -65,11 +71,72 @@ const CATEGORY_ICON_MAP: Record<Category, React.ComponentType<{ className?: stri
 }
 
 export default function HomePage() {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  const router = useRouter()
+  const toast = useUnifiedToast()
   const [activeFilter, setActiveFilter] = useState<Category | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const { events, loading, error, refetch } = useEvents(activeFilter || undefined)
+  const { events, loading: eventsLoading, error, refetch } = useEvents(activeFilter || undefined)
   const { position: userLocation, loading: locationLoading, error: locationError, requestLocation } = useGeolocation()
+
+  // Estado para controlar si hemos intentado obtener ubicación
+  const [hasRequestedLocation, setHasRequestedLocation] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detectar dispositivo móvil
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Pull-to-refresh handler
+  const handleRefresh = async () => {
+    await refetch()
+    toast.success('Eventos actualizados', {
+      description: `${events.length} eventos cargados`,
+      duration: 2000,
+    })
+  }
+
+  const {
+    isRefreshing,
+    pullDistance,
+    containerRef,
+  } = usePullToRefresh({
+    onRefresh: handleRefresh,
+    threshold: 100,
+    enabled: isMobile,
+  })
+
+  // Redirigir al login si no está autenticado
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/auth/login')
+    }
+  }, [user, loading, router])
+
+  // Solicitar ubicación automáticamente al cargar la página
+  useEffect(() => {
+    if (!hasRequestedLocation && !userLocation && !locationLoading) {
+      console.log('Homepage: Requesting user location')
+      requestLocation()
+      setHasRequestedLocation(true)
+    }
+  }, [hasRequestedLocation, userLocation, locationLoading, requestLocation])
+
+  // Debug: verificar carga de eventos
+  useEffect(() => {
+    console.log('🏠 Homepage: Events loading status:', { loading: eventsLoading, error, eventsCount: events.length })
+    console.log('🏠 Homepage: Events data:', events)
+
+    if (error) {
+      console.error('🏠 Homepage: Events error:', error)
+    }
+  }, [events, eventsLoading, error])
 
   // Filtrar eventos por búsqueda
   const filteredEvents = useMemo(() => {
@@ -98,28 +165,6 @@ export default function HomePage() {
   }, [events])
 
   // Estadísticas
-  const stats = useMemo(() => {
-    const totalEvents = events.length
-    const upcomingEvents = events.filter(event => new Date(event.date) >= new Date()).length
-    const totalAttendees = events.reduce((sum, event) => sum + (Number(event.attendees) || 0), 0)
-    const categories = new Set(events.map(event => event.category)).size
-
-    return { totalEvents, upcomingEvents, totalAttendees, categories }
-  }, [events])
-
-  // Estado para controlar si hemos intentado obtener ubicación
-  const [hasRequestedLocation, setHasRequestedLocation] = useState(false)
-
-  // Solicitar ubicación automáticamente al cargar la página
-  useEffect(() => {
-    if (!hasRequestedLocation && !userLocation && !locationLoading) {
-      console.log('Homepage: Requesting user location')
-      requestLocation()
-      setHasRequestedLocation(true)
-    }
-  }, [hasRequestedLocation, userLocation, locationLoading, requestLocation])
-
-  // Estadísticas
   const homepageStats = useMemo(() => {
     const totalEvents = events.length
     const upcomingEvents = events.filter(event => new Date(event.date) >= new Date()).length
@@ -128,15 +173,57 @@ export default function HomePage() {
     return { totalEvents, upcomingEvents, totalAttendees }
   }, [events])
 
-  // Debug: verificar carga de eventos
-  useEffect(() => {
-    console.log('🏠 Homepage: Events loading status:', { loading, error, eventsCount: events.length })
-    console.log('🏠 Homepage: Events data:', events)
+  // Mostrar pantalla de carga mientras verifica autenticación
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="space-y-8">
+            {/* Hero skeleton */}
+            <div className="grid gap-8 lg:grid-cols-2 items-center">
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-16 w-full max-w-lg" />
+                <Skeleton className="h-4 w-full max-w-md" />
+                <div className="flex gap-4 pt-4">
+                  <Skeleton className="h-12 w-36" />
+                  <Skeleton className="h-12 w-36" />
+                </div>
+              </div>
+              <Skeleton className="h-80 md:h-96 rounded-xl" />
+            </div>
+            
+            {/* Search and filters skeleton */}
+            <div className="space-y-4">
+              <Skeleton className="h-12 w-full" />
+              <div className="flex gap-2 overflow-hidden">
+                {[...Array(6)].map((_, i) => (
+                  <Skeleton key={i} className="h-9 w-24 shrink-0" />
+                ))}
+              </div>
+            </div>
+            
+            {/* Events grid skeleton */}
+            <div className="space-y-4">
+              <Skeleton className="h-10 w-48" />
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {[...Array(8)].map((_, i) => (
+                  <SkeletonCard key={i} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
-    if (error) {
-      console.error('🏠 Homepage: Events error:', error)
-    }
-  }, [events, loading, error])
+  // Si no está logueado, no renderizar el contenido (será redirigido)
+  if (!user) {
+    return null
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -421,16 +508,32 @@ export default function HomePage() {
         <section className="py-12">
           <div className="container mx-auto px-4">
             <div className="mb-8 flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl font-bold text-foreground mb-2">
-                  {loading ? "Cargando eventos..." :
-                   searchQuery ? `Resultados para "${searchQuery}"` :
-                   activeFilter ? `Eventos de ${activeFilter}` :
-                   "Todos los eventos"}
-                </h2>
-                <p className="text-muted-foreground">
-                  {!loading && `${filteredEvents.length} evento${filteredEvents.length !== 1 ? 's' : ''} encontrado${filteredEvents.length !== 1 ? 's' : ''}`}
-                </p>
+              <div className="flex items-center gap-4">
+                <div>
+                  <h2 className="text-3xl font-bold text-foreground mb-2">
+                    {eventsLoading ? "Cargando eventos..." :
+                     searchQuery ? `Resultados para "${searchQuery}"` :
+                     activeFilter ? `Eventos de ${activeFilter}` :
+                     "Todos los eventos"}
+                  </h2>
+                  <p className="text-muted-foreground">
+                    {!eventsLoading && `${filteredEvents.length} evento${filteredEvents.length !== 1 ? 's' : ''} encontrado${filteredEvents.length !== 1 ? 's' : ''}`}
+                  </p>
+                </div>
+                
+                {/* Pull-to-refresh indicator para desktop */}
+                {!isMobile && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleRefresh}
+                    disabled={eventsLoading}
+                    className="shrink-0"
+                    title="Actualizar eventos"
+                  >
+                    <RefreshCcw className={`h-5 w-5 ${eventsLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                )}
               </div>
 
               {user && (
@@ -443,57 +546,63 @@ export default function HomePage() {
               )}
             </div>
 
-            {loading ? (
+            {/* Loading state con Skeletons */}
+            {eventsLoading ? (
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {[...Array(8)].map((_, i) => (
-                  <div key={i} className="h-80 animate-pulse rounded-lg bg-muted" />
+                  <SkeletonCard key={i} />
                 ))}
               </div>
             ) : (
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredEvents.map((event) => (
-                  <EventCard 
-                    key={event.id} 
-                    event={event} 
-                    onDelete={refetch}
-                  />
-                ))}
-              </div>
+              <PullToRefreshContainer
+                onRefresh={handleRefresh}
+                enabled={isMobile}
+                threshold={100}
+              >
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredEvents.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      onDelete={refetch}
+                    />
+                  ))}
+                </div>
+              </PullToRefreshContainer>
             )}
 
-            {!loading && filteredEvents.length === 0 && (
+            {/* Empty state mejorado */}
+            {!eventsLoading && filteredEvents.length === 0 && (
+              <EmptyPreset
+                preset={searchQuery ? 'no-results' : activeFilter ? 'no-data' : 'no-events'}
+                title={
+                  searchQuery ? `No se encontraron resultados para "${searchQuery}"` :
+                  activeFilter ? `No hay eventos de ${activeFilter}` :
+                  undefined
+                }
+                description={
+                  searchQuery ? "Prueba con otros términos de búsqueda o quita los filtros para ver más eventos." :
+                  activeFilter ? `No se encontraron eventos en la categoría "${activeFilter}".` :
+                  undefined
+                }
+                actionLabel={user ? 'Crear evento' : undefined}
+                onAction={() => router.push('/crear')}
+                className="mx-auto max-w-md"
+              />
+            )}
+            
+            {/* Error state */}
+            {error && !eventsLoading && (
               <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="h-24 w-24 rounded-full bg-muted flex items-center justify-center mb-6">
-                  <Search className="h-12 w-12 text-muted-foreground" />
+                <div className="h-24 w-24 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center mb-6">
+                  <AlertCircle className="h-12 w-12 text-red-500" />
                 </div>
-                <h3 className="text-2xl font-semibold mb-2">
-                  {searchQuery ? "No se encontraron resultados" :
-                   activeFilter ? `No hay eventos de ${activeFilter}` :
-                   "No hay eventos disponibles"}
-                </h3>
-                <p className="text-muted-foreground mb-6 max-w-md">
-                  {searchQuery ? "Prueba con otros términos de búsqueda o quita los filtros para ver más eventos." :
-                   activeFilter ? `No se encontraron eventos en la categoría "${activeFilter}".` :
-                   "Sé el primero en crear un evento en tu zona."}
-                </p>
-                {user ? (
-                  <Link href="/crear">
-                    <Button className="gap-2">
-                      <Plus className="h-4 w-4" />
-                      Crear el primer evento
-                    </Button>
-                  </Link>
-                ) : (
-                  <div className="text-center">
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Inicia sesión para crear eventos
-                    </p>
-                    <Button>Iniciar Sesión</Button>
-                  </div>
-                )}
-                {error && (
-                  <p className="text-sm text-red-500 mt-4">{error}</p>
-                )}
+                <h3 className="text-2xl font-semibold mb-2">Error al cargar eventos</h3>
+                <p className="text-muted-foreground mb-6 max-w-md">{error}</p>
+                <Button onClick={refetch} className="gap-2">
+                  <RefreshCcw className="h-4 w-4" />
+                  Reintentar
+                </Button>
               </div>
             )}
           </div>

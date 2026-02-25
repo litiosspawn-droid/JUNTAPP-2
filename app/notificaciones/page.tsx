@@ -2,12 +2,13 @@
 
 import { NotificationTest } from '@/components/notification-test'
 import { Header, Footer } from '@/components/layout'
+import { withAuth } from '@/hoc/withAuth'
 
-export default function NotificationsPage() {
+function NotificationsPageContent() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
+
       <main className="flex-1 container mx-auto py-8 px-4">
         <div className="max-w-3xl mx-auto space-y-6">
           <div className="text-center space-y-2">
@@ -56,3 +57,6 @@ export default function NotificationsPage() {
     </div>
   )
 }
+
+// Proteger ruta: requiere autenticación
+export default withAuth(NotificationsPageContent);

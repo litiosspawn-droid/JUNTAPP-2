@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as admin from '@/lib/firebase/admin';
 import { db, messaging } from '@/lib/firebase/admin';
+import { checkRateLimit, RATE_LIMITS, RateLimitError } from '@/lib/rate-limit-server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,18 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields: userId, payload' },
         { status: 400 }
       );
+    }
+
+    // Check rate limit
+    try {
+      await checkRateLimit(userId, 'SEND_NOTIFICATION', RATE_LIMITS.SEND_NOTIFICATION);
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        return NextResponse.json(
+          { error: error.message, retryAfter: error.retryAfter },
+          { status: 429 }
+        );
+      }
     }
 
     // Verificar preferencias del usuario

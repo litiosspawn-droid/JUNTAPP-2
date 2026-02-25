@@ -9,6 +9,8 @@ import { useRouter } from 'next/navigation';
 import { Header, Footer } from "@/components/layout";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyPreset } from '@/components/ui/empty';
 import { Calendar, MapPin, Users, Globe, Edit } from 'lucide-react';
 import { EventCard } from '@/components/event-card';
 import type { Event } from '@/lib/firebase/events';
@@ -121,10 +123,50 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto mb-4"></div>
-            <p>Cargando perfil...</p>
+        <main className="flex-1 container mx-auto px-4 py-8">
+          <div className="space-y-8">
+            {/* Profile header skeleton */}
+            <div className="bg-card rounded-lg p-6 border">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                <Skeleton className="h-24 w-24 rounded-full" />
+                <div className="flex-1 space-y-3">
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+                <Skeleton className="h-10 w-32" />
+              </div>
+            </div>
+
+            {/* Stats skeleton */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-4 text-center">
+                    <Skeleton className="h-8 w-12 mx-auto mb-2" />
+                    <Skeleton className="h-4 w-24 mx-auto" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Events skeleton */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {[...Array(2)].map((_, i) => (
+                <Card key={i}>
+                  <CardHeader>
+                    <Skeleton className="h-6 w-40" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {[...Array(3)].map((_, j) => (
+                        <Skeleton key={j} className="h-48" />
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         </main>
         <Footer />
@@ -137,13 +179,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
       <div className="flex min-h-screen flex-col">
         <Header />
         <main className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">{error || 'Perfil no encontrado'}</h1>
-            <p className="text-muted-foreground mb-6">El perfil que buscas no existe o ha sido eliminado.</p>
-            <Button onClick={() => router.push('/')}>
-              Volver al inicio
-            </Button>
-          </div>
+          <EmptyPreset
+            preset="no-data"
+            title="Perfil no encontrado"
+            description={error || 'El perfil que buscas no existe o ha sido eliminado.'}
+            actionLabel="Volver al inicio"
+            onAction={() => router.push('/')}
+            className="max-w-md"
+          />
         </main>
         <Footer />
       </div>
@@ -239,18 +282,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               </CardHeader>
               <CardContent>
                 {createdEvents.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">No ha creado eventos aún.</p>
-                    {isOwnProfile && (
-                      <Button
-                        className="mt-4"
-                        onClick={() => router.push('/crear')}
-                      >
-                        Crear primer evento
-                      </Button>
-                    )}
-                  </div>
+                  <EmptyPreset
+                    preset="no-events"
+                    title="Sin eventos creados"
+                    description={isOwnProfile ? "¡Crea tu primer evento!" : "Este usuario aún no ha creado eventos."}
+                    actionLabel={isOwnProfile ? 'Crear evento' : undefined}
+                    onAction={() => router.push('/crear')}
+                    className="py-8"
+                  />
                 ) : (
                   <div className="space-y-4">
                     {createdEvents.map((event) => (
@@ -271,10 +310,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
               </CardHeader>
               <CardContent>
                 {attendingEvents.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">No asiste a ningún evento.</p>
-                  </div>
+                  <EmptyPreset
+                    preset="no-data"
+                    title="Sin eventos"
+                    description={isOwnProfile ? "Explora eventos y confirma tu asistencia" : "Este usuario no está asistiendo a ningún evento."}
+                    actionLabel={isOwnProfile ? 'Explorar eventos' : undefined}
+                    onAction={() => router.push('/')}
+                    className="py-8"
+                  />
                 ) : (
                   <div className="space-y-4">
                     {attendingEvents.map((event) => (
