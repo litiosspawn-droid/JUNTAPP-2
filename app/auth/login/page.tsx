@@ -15,9 +15,17 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, loginWithGoogle } = useAuth();
+  const { login, loginWithGoogle, user } = useAuth();
 
   const redirect = searchParams.get('redirect') || '/';
+
+  // Redirect after successful login when user is available
+  useEffect(() => {
+    if (user && isLoading) {
+      setIsLoading(false);
+      router.push(redirect);
+    }
+  }, [user, isLoading, redirect, router]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,10 +34,9 @@ function LoginForm() {
 
     try {
       await login(email, password);
-      router.push(redirect);
+      // Don't redirect here - wait for useEffect to detect user
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -40,7 +47,7 @@ function LoginForm() {
 
     try {
       await loginWithGoogle();
-      router.push(redirect);
+      // Don't redirect here - wait for useEffect to detect user
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión con Google');
       setIsLoading(false);

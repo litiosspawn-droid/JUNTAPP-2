@@ -32,7 +32,7 @@ export function withAuth<P extends object>(
     const { user, loading, isEmailVerified } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const [userRole, setUserRole] = useState<string>('user'); // Default a 'user'
+    const [userRole, setUserRole] = useState<string>('user');
     const [roleLoading, setRoleLoading] = useState(true);
     const [hasRedirected, setHasRedirected] = useState(false);
 
@@ -54,22 +54,20 @@ export function withAuth<P extends object>(
           // Timeout de 3 segundos para evitar bloqueos
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 3000);
-          
+
           const response = await fetch(`/api/user/${user.uid}/role`, {
             signal: controller.signal,
           });
-          
+
           clearTimeout(timeoutId);
-          
+
           if (response.ok) {
             const data = await response.json();
             setUserRole(data.role || 'user');
           } else {
-            // Si falla, asumir rol 'user'
             setUserRole('user');
           }
         } catch {
-          // Si falla, asumir rol 'user'
           setUserRole('user');
         } finally {
           setRoleLoading(false);
@@ -82,7 +80,8 @@ export function withAuth<P extends object>(
     // Redirigir si no está autenticado (solo una vez)
     useEffect(() => {
       if (hasRedirected) return;
-      
+
+      // Solo redirigir si terminó de cargar y no hay usuario
       if (!loading && !user && !roleLoading) {
         setHasRedirected(true);
         const redirectUrl = `${redirectUnauthenticated}?redirect=${encodeURIComponent(pathname)}`;
@@ -93,43 +92,23 @@ export function withAuth<P extends object>(
     // Redirigir si requiere email verificado y no lo está (solo una vez)
     useEffect(() => {
       if (hasRedirected) return;
-      
+
       if (!loading && user && requireEmailVerification && !isEmailVerified && !roleLoading) {
         setHasRedirected(true);
         router.push(redirectUnverified);
       }
     }, [user, loading, isEmailVerified, requireEmailVerification, router, redirectUnverified, roleLoading, hasRedirected]);
 
-    // Mostrar loading mientras verifica autenticación y rol
-    // Pero con timeout máximo de 5 segundos
-    const [showLoading, setShowLoading] = useState(true);
-    
-    useEffect(() => {
-      const timeout = setTimeout(() => {
-        setShowLoading(false);
-      }, 5000);
-      
-      if (!loading && !roleLoading) {
-        setShowLoading(false);
-      }
-      
-      return () => clearTimeout(timeout);
-    }, [loading, roleLoading]);
-
-    if (showLoading && (loading || roleLoading)) {
+    // Mostrar loading mientras verifica autenticación
+    if (loading || roleLoading) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
           <Card className="w-full max-w-md">
             <CardContent className="flex flex-col items-center justify-center p-8">
               <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
               <p className="text-muted-foreground text-center">
-                {loading ? 'Cargando...' : 'Verificando permisos...'}
+                Cargando...
               </p>
-              {loading && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Si esto tarda más de lo normal, recargá la página
-                </p>
-              )}
             </CardContent>
           </Card>
         </div>
