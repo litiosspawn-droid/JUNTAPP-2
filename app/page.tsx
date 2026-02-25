@@ -306,6 +306,14 @@ export default function HomePage() {
               {/* Map Preview - SIEMPRE VISIBLE */}
               <SlideIn direction="right" delay={400}>
                 <div className="relative">
+                  {/* Eventos esta semana badge - arriba del mapa */}
+                  <div className="absolute -top-3 left-4 z-20">
+                    <div className="bg-card rounded-lg p-3 shadow-lg border flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <span className="text-sm font-medium">{homepageStats.upcomingEvents} eventos esta semana</span>
+                    </div>
+                  </div>
+                  
                   <div className="relative h-80 md:h-96 rounded-xl overflow-hidden shadow-2xl">
                   <ErrorBoundary
                     fallback={
@@ -380,13 +388,6 @@ export default function HomePage() {
                       </div>
                     </div>
                   )}
-                </div>
-
-                <div className="absolute -bottom-4 -left-4 bg-card rounded-lg p-4 shadow-lg border">
-                  <div className="flex items-center gap-2 text-sm">
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                    <span className="font-medium">{homepageStats.upcomingEvents} eventos esta semana</span>
-                  </div>
                 </div>
               </div>
               </SlideIn>
