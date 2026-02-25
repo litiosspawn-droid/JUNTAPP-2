@@ -8,6 +8,7 @@ import {
   getAttendeeStats,
   joinWaitlist,
   leaveWaitlist,
+  cancelAttendeeRegistration,
   type Attendee,
   type AttendeeStats,
 } from '@/lib/firebase/attendees';
@@ -174,17 +175,35 @@ export function useAttendees(eventId: string, options: UseAttendeesOptions = {})
       setIsAttending(false);
       setStats(prev => prev ? { ...prev, confirmed: prev.confirmed - 1, total: prev.total - 1 } : null);
 
-      toast({
-        title: 'Registro cancelado',
+      toast.info('Registro cancelado', {
         description: 'Se ha cancelado tu registro en el evento',
       });
     } catch (error) {
       console.error('Error cancelling attendance:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'No se pudo cancelar la asistencia',
-        variant: 'destructive',
+      toast.error('Error al cancelar asistencia');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  // Cancelar registro (con validación de política)
+  const handleCancelRegistration = async () => {
+    if (!user || !eventId) return;
+
+    try {
+      setIsConfirming(true);
+      await cancelAttendeeRegistration(eventId, user.uid);
+
+      setIsAttending(false);
+      setIsOnWaitlist(false);
+      setStats(prev => prev ? { ...prev, confirmed: prev.confirmed - 1 } : null);
+
+      toast.success('Cancelación exitosa', {
+        description: 'Tu registro ha sido cancelado correctamente',
       });
+    } catch (error) {
+      console.error('Error cancelling registration:', error);
+      toast.error(error instanceof Error ? error.message : 'Error al cancelar registro');
     } finally {
       setIsConfirming(false);
     }
@@ -203,6 +222,7 @@ export function useAttendees(eventId: string, options: UseAttendeesOptions = {})
     maxAttendees,
     confirmAttendance: handleConfirmAttendance,
     cancelAttendance: handleCancelAttendance,
+    cancelRegistration: handleCancelRegistration,
     joinWaitlist: handleJoinWaitlist,
     leaveWaitlist: handleLeaveWaitlist,
   };

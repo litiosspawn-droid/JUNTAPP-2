@@ -45,8 +45,15 @@ export interface Event {
   recurrenceCount?: number; // Cantidad de repeticiones
   parentEventId?: string; // ID del evento padre (para instancias recurrentes)
   isPrivate?: boolean; // Evento privado
-  status?: 'active' | 'cancelled' | 'completed'; // Estado del evento
+  status?: 'active' | 'cancelled' | 'completed' | 'postponed'; // Estado del evento
   viewCount?: number; // Para analytics
+  // Política de cancelación
+  cancellationPolicy?: 'flexible' | 'moderate' | 'strict' | 'custom';
+  cancellationDeadline?: string; // Fecha límite para cancelar
+  cancellationReason?: string; // Razón de cancelación (si aplica)
+  cancelledBy?: string; // UID de quien canceló
+  cancelledAt?: Timestamp; // Fecha de cancelación
+  allowRefund?: boolean; // Permitir reembolso (si hay pago)
 }
 
 export interface RecurringEventConfig {
@@ -535,5 +542,262 @@ export const deleteRecurringInstance = async (
   } catch (error) {
     console.error('Error deleting recurring instance:', error);
     throw new Error('No se pudo eliminar el evento');
+  }
+};
+
+/**
+ * Cancelar un evento (organizador)
+ */
+export const cancelEvent = async (
+  eventId: string,
+  userId: string,
+  reason?: string,
+  notifyAttendees: boolean = true
+): Promise<void> => {
+  try {
+    const eventRef = doc(db, 'events', eventId);
+    const eventDoc = await getDoc(eventRef);
+
+    if (!eventDoc.exists()) {
+      throw new Error('Evento no encontrado');
+    }
+
+    const eventData = eventDoc.data();
+
+    // Verificar que el usuario sea el creador
+    if (eventData.createdBy !== userId) {
+      throw new Error('Solo el organizador puede cancelar este evento');
+    }
+
+    // Verificar que no esté ya cancelado
+    if (eventData.status === 'cancelled') {
+      throw new Error('El evento ya está cancelado');
+    }
+
+    // Actualizar estado del evento
+    await updateDoc(eventRef, {
+      status: 'cancelled',
+      cancellationReason: reason || 'Sin especificar',
+      cancelledBy: userId,
+      cancelledAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+
+    // Notificar a asistentes (esto se puede expandir con cloud functions)
+    if (notifyAttendees) {
+      // Obtener lista de asistentes
+      const attendeesQuery = query(
+        collection(db, 'attendees'),
+        where('eventId', '==', eventId)
+      );
+      const attendeesSnapshot = await getDocs(attendeesQuery);
+
+      // Crear notificaciones para cada asistente
+      const notificationPromises = attendeesSnapshot.docs.map(async (doc) => {
+        const attendee = doc.data();
+        if (attendee.status === 'confirmed' || attendee.status === 'waitlist') {
+          await addDoc(collection(db, 'notifications'), {
+            userId: attendee.userId,
+            eventId,
+            type: 'event_cancelled',
+            title: 'Evento cancelado',
+            message: `El evento "${eventData.title}" ha sido cancelado. ${reason ? 'Motivo: ' + reason : ''}`,
+            read: false,
+            createdAt: Timestamp.now(),
+          });
+        }
+      });
+
+      await Promise.all(notificationPromises);
+    }
+
+    return;
+  } catch (error) {
+    console.error('Error cancelling event:', error);
+    throw new Error('No se pudo cancelar el evento');
+  }
+};
+
+/**
+ * Posponer un evento (cambiar fecha)
+ */
+export const postponeEvent = async (
+  eventId: string,
+  userId: string,
+  newDate: string,
+  newTime?: string,
+  reason?: string,
+  notifyAttendees: boolean = true
+): Promise<void> => {
+  try {
+    const eventRef = doc(db, 'events', eventId);
+    const eventDoc = await getDoc(eventRef);
+
+    if (!eventDoc.exists()) {
+      throw new Error('Evento no encontrado');
+    }
+
+    const eventData = eventDoc.data();
+
+    // Verificar que el usuario sea el creador
+    if (eventData.createdBy !== userId) {
+      throw new Error('Solo el organizador puede posponer este evento');
+    }
+
+    // Actualizar fecha del evento
+    await updateDoc(eventRef, {
+      date: newDate,
+      time: newTime || eventData.time,
+      status: 'active', // Mantener como activo
+      cancellationReason: reason ? `Postpuesto: ${reason}` : undefined,
+      updatedAt: Timestamp.now(),
+    });
+
+    // Notificar a asistentes
+    if (notifyAttendees) {
+      const attendeesQuery = query(
+        collection(db, 'attendees'),
+        where('eventId', '==', eventId)
+      );
+      const attendeesSnapshot = await getDocs(attendeesQuery);
+
+      const notificationPromises = attendeesSnapshot.docs.map(async (doc) => {
+        const attendee = doc.data();
+        if (attendee.status === 'confirmed' || attendee.status === 'waitlist') {
+          await addDoc(collection(db, 'notifications'), {
+            userId: attendee.userId,
+            eventId,
+            type: 'event_postponed',
+            title: 'Evento pospuesto',
+            message: `El evento "${eventData.title}" fue pospuesto para el ${newDate} ${newTime || eventData.time}. ${reason ? 'Motivo: ' + reason : ''}`,
+            read: false,
+            createdAt: Timestamp.now(),
+          });
+        }
+      });
+
+      await Promise.all(notificationPromises);
+    }
+
+    return;
+  } catch (error) {
+    console.error('Error postponing event:', error);
+    throw new Error('No se pudo posponer el evento');
+  }
+};
+
+/**
+ * Verificar si un usuario puede cancelar su registro (según política)
+ */
+export const canCancelRegistration = (
+  eventDate: string,
+  cancellationPolicy: 'flexible' | 'moderate' | 'strict' | 'custom' = 'moderate',
+  cancellationDeadline?: string
+): { canCancel: boolean; reason?: string } => {
+  const now = new Date();
+  const event = new Date(eventDate);
+  const hoursUntilEvent = (event.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  // Si hay fecha límite específica
+  if (cancellationDeadline) {
+    const deadline = new Date(cancellationDeadline);
+    if (now > deadline) {
+      return { canCancel: false, reason: 'Se pasó el plazo de cancelación' };
+    }
+    return { canCancel: true };
+  }
+
+  // Políticas predefinidas
+  switch (cancellationPolicy) {
+    case 'flexible':
+      // Cancelar hasta 2 horas antes
+      if (hoursUntilEvent < 2) {
+        return { canCancel: false, reason: 'Solo se puede cancelar hasta 2 horas antes' };
+      }
+      return { canCancel: true };
+
+    case 'moderate':
+      // Cancelar hasta 24 horas antes (default)
+      if (hoursUntilEvent < 24) {
+        return { canCancel: false, reason: 'Solo se puede cancelar hasta 24 horas antes' };
+      }
+      return { canCancel: true };
+
+    case 'strict':
+      // Cancelar hasta 7 días antes
+      if (hoursUntilEvent < 168) { // 7 * 24
+        return { canCancel: false, reason: 'Solo se puede cancelar hasta 7 días antes' };
+      }
+      return { canCancel: true };
+
+    default:
+      return { canCancel: true };
+  }
+};
+
+/**
+ * Cancelar registro de asistente (con validación de política)
+ */
+export const cancelAttendeeRegistration = async (
+  eventId: string,
+  userId: string,
+  policy?: 'flexible' | 'moderate' | 'strict' | 'custom',
+  deadline?: string
+): Promise<void> => {
+  try {
+    // Obtener evento para verificar política
+    const eventDoc = await getDoc(doc(db, 'events', eventId));
+    if (!eventDoc.exists()) {
+      throw new Error('Evento no encontrado');
+    }
+
+    const eventData = eventDoc.data();
+    
+    // Verificar si puede cancelar
+    const { canCancel, reason } = canCancelRegistration(
+      eventData.date,
+      policy || eventData.cancellationPolicy || 'moderate',
+      deadline || eventData.cancellationDeadline
+    );
+
+    if (!canCancel) {
+      throw new Error(reason);
+    }
+
+    // Buscar registro del asistente
+    const attendeesQuery = query(
+      collection(db, 'attendees'),
+      where('eventId', '==', eventId)
+    );
+    const querySnapshot = await getDocs(attendeesQuery);
+
+    let attendeeDoc: any = null;
+    querySnapshot.forEach((doc) => {
+      if (doc.data().userId === userId) {
+        attendeeDoc = doc;
+      }
+    });
+
+    if (!attendeeDoc) {
+      throw new Error('No estás registrado en este evento');
+    }
+
+    // Actualizar estado a cancelled
+    await updateDoc(doc(db, 'attendees', attendeeDoc.id), {
+      status: 'cancelled',
+      cancelledAt: Timestamp.now(),
+    });
+
+    // Decrementar contador si estaba confirmado
+    if (attendeeDoc.data().status === 'confirmed') {
+      await updateDoc(doc(db, 'events', eventId), {
+        attendees: increment(-1),
+      });
+    }
+
+    return;
+  } catch (error) {
+    console.error('Error cancelling registration:', error);
+    throw new Error('No se pudo cancelar el registro');
   }
 };

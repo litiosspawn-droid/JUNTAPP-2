@@ -415,3 +415,80 @@ export const promoteFromWaitlist = async (eventId: string, userId: string): Prom
     throw new Error('No se pudo promover al usuario');
   }
 };
+
+/**
+ * Cancelar registro de asistente con validación de política
+ * Esta función se exporta desde events.ts, pero la referenciamos aquí también
+ */
+export const cancelAttendeeRegistration = async (
+  eventId: string,
+  userId: string,
+  policy?: 'flexible' | 'moderate' | 'strict' | 'custom',
+  deadline?: string
+): Promise<void> => {
+  try {
+    // Obtener evento para verificar política
+    const eventDoc = await getDoc(doc(db, 'events', eventId));
+    if (!eventDoc.exists()) {
+      throw new Error('Evento no encontrado');
+    }
+
+    const eventData = eventDoc.data();
+    
+    // Verificar si puede cancelar (lógica simplificada, la completa está en events.ts)
+    const now = new Date();
+    const eventDate = new Date(eventData.date);
+    const hoursUntilEvent = (eventDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    
+    const cancellationPolicy = policy || eventData.cancellationPolicy || 'moderate';
+    let canCancel = true;
+    
+    if (cancellationPolicy === 'flexible' && hoursUntilEvent < 2) {
+      canCancel = false;
+    } else if (cancellationPolicy === 'moderate' && hoursUntilEvent < 24) {
+      canCancel = false;
+    } else if (cancellationPolicy === 'strict' && hoursUntilEvent < 168) {
+      canCancel = false;
+    }
+    
+    if (!canCancel) {
+      throw new Error('No se puede cancelar después del plazo establecido');
+    }
+
+    // Buscar registro del asistente
+    const attendeesQuery = query(
+      collection(db, 'attendees'),
+      where('eventId', '==', eventId)
+    );
+    const querySnapshot = await getDocs(attendeesQuery);
+
+    let attendeeDoc: any = null;
+    querySnapshot.forEach((doc) => {
+      if (doc.data().userId === userId) {
+        attendeeDoc = doc;
+      }
+    });
+
+    if (!attendeeDoc) {
+      throw new Error('No estás registrado en este evento');
+    }
+
+    // Actualizar estado a cancelled
+    await updateDoc(doc(db, 'attendees', attendeeDoc.id), {
+      status: 'cancelled',
+      cancelledAt: serverTimestamp(),
+    });
+
+    // Decrementar contador si estaba confirmado
+    if (attendeeDoc.data().status === 'confirmed') {
+      await updateDoc(doc(db, 'events', eventId), {
+        attendees: increment(-1),
+      });
+    }
+
+    return;
+  } catch (error) {
+    console.error('Error cancelling registration:', error);
+    throw new Error('No se pudo cancelar el registro');
+  }
+};

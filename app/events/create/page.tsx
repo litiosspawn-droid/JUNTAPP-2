@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import ImageUpload from '@/components/events/ImageUpload';
 import { RecurrenceConfigForm, type RecurrenceConfig } from '@/components/create-event/recurrence-config';
+import { CancellationPolicyForm, type CancellationPolicy } from '@/components/create-event/cancellation-policy';
 import { createRecurringEvents } from '@/lib/firebase/events';
 
 function CreateEventPageContent() {
@@ -23,6 +24,12 @@ function CreateEventPageContent() {
   const [recurrenceConfig, setRecurrenceConfig] = useState<RecurrenceConfig>({
     isRecurring: false,
     pattern: 'none',
+  });
+  const [cancellationPolicy, setCancellationPolicy] = useState<{
+    policy: CancellationPolicy;
+    deadline?: string;
+  }>({
+    policy: 'moderate',
   });
   const [formData, setFormData] = useState({
     title: '',
@@ -82,6 +89,8 @@ function CreateEventPageContent() {
         recurrencePattern: recurrenceConfig.pattern !== 'none' ? recurrenceConfig.pattern : undefined,
         recurrenceEndDate: recurrenceConfig.endDate,
         recurrenceCount: recurrenceConfig.count,
+        cancellationPolicy: cancellationPolicy.policy,
+        cancellationDeadline: cancellationPolicy.policy === 'custom' ? cancellationPolicy.deadline : undefined,
       };
 
       // 5. Guardar evento padre
@@ -187,6 +196,12 @@ function CreateEventPageContent() {
             <RecurrenceConfigForm
               value={recurrenceConfig}
               onChange={setRecurrenceConfig}
+            />
+
+            {/* Política de cancelación */}
+            <CancellationPolicyForm
+              value={cancellationPolicy}
+              onChange={setCancellationPolicy}
             />
 
             {error && <p className="text-red-500">{error}</p>}
