@@ -1,19 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { EmptyPreset } from '@/components/ui/empty';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 interface WithAuthOptions {
   requireEmailVerification?: boolean;
-  allowedRoles?: ('user' | 'admin' | 'moderator')[];
-  redirectUnauthenticated?: string;
-  redirectUnauthorized?: string;
-  redirectUnverified?: string;
 }
 
 export function withAuth<P extends object>(
@@ -22,88 +17,21 @@ export function withAuth<P extends object>(
 ) {
   const {
     requireEmailVerification = false,
-    allowedRoles = ['user', 'admin', 'moderator'],
-    redirectUnauthenticated = '/auth/login',
-    redirectUnauthorized = '/',
-    redirectUnverified = '/auth/verify-email',
   } = options;
 
   return function WithAuth(props: P) {
     const { user, loading, isEmailVerified } = useAuth();
     const router = useRouter();
-    const pathname = usePathname();
-    const [userRole, setUserRole] = useState<string>('user');
-    const [roleLoading, setRoleLoading] = useState(true);
-    const [hasRedirected, setHasRedirected] = useState(false);
+    const [showContent, setShowContent] = useState(false);
 
-    console.log('[withAuth] Render:', { pathname, loading, user: user ? user.uid : null, hasRedirected });
-
-    // Obtener rol del usuario (solo una vez)
+    // Solo esperar a que cargue auth, sin redirecciones
     useEffect(() => {
-      console.log('[withAuth] Role check effect:', { user: user ? user.uid : null, userRole });
-      if (!user) {
-        setRoleLoading(false);
-        return;
+      if (!loading) {
+        setShowContent(true);
       }
+    }, [loading]);
 
-      // Si ya tenemos el rol, no hacer nada
-      if (userRole !== 'user') {
-        setRoleLoading(false);
-        return;
-      }
-
-      const getUserRole = async () => {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-          const response = await fetch(`/api/user/${user.uid}/role`, {
-            signal: controller.signal,
-          });
-
-          clearTimeout(timeoutId);
-
-          if (response.ok) {
-            const data = await response.json();
-            setUserRole(data.role || 'user');
-          } else {
-            setUserRole('user');
-          }
-        } catch {
-          setUserRole('user');
-        } finally {
-          setRoleLoading(false);
-        }
-      };
-
-      getUserRole();
-    }, [user, userRole]);
-
-    // Redirigir si no está autenticado (solo una vez)
-    useEffect(() => {
-      console.log('[withAuth] Auth redirect check:', { loading, user: !!user, roleLoading, hasRedirected });
-      if (hasRedirected) return;
-
-      // Solo redirigir si terminó de cargar y no hay usuario
-      if (!loading && !user && !roleLoading) {
-        setHasRedirected(true);
-        const redirectUrl = `${redirectUnauthenticated}?redirect=${encodeURIComponent(pathname)}`;
-        console.log('[withAuth] Redirecting to login:', redirectUrl);
-        router.push(redirectUrl);
-      }
-    }, [user, loading, router, pathname, redirectUnauthenticated, roleLoading, hasRedirected]);
-
-    // Redirigir si requiere email verificado y no lo está (solo una vez)
-    useEffect(() => {
-      if (hasRedirected) return;
-
-      if (!loading && user && requireEmailVerification && !isEmailVerified && !roleLoading) {
-        setHasRedirected(true);
-        router.push(redirectUnverified);
-      }
-    }, [user, loading, isEmailVerified, requireEmailVerification, router, redirectUnverified, roleLoading, hasRedirected]);
-
-    // Mostrar loading mientras Firebase verifica el estado de autenticación
+    // Mostrar loading solo mientras Firebase verifica
     if (loading) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
@@ -119,18 +47,35 @@ export function withAuth<P extends object>(
       );
     }
 
-    // Si no está logueado (después de que terminó el loading), mostrar pantalla de acceso
+    // Si no está logueado, mostrar mensaje simple
     if (!user) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
-          <EmptyPreset
-            preset="no-data"
-            title="Acceso requerido"
-            description="Debes iniciar sesión para acceder a esta página."
-            actionLabel="Iniciar Sesión"
-            onAction={() => router.push(`${redirectUnauthenticated}?redirect=${encodeURIComponent(pathname)}`)}
-            className="max-w-md"
-          />
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center">
+              <AlertCircle className="h-12 w-12 text-primary mx-auto mb-2" />
+              <CardTitle className="text-2xl">Acceso Requerido</CardTitle>
+              <CardDescription>
+                Debes iniciar sesión para acceder a esta página
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Button
+                onClick={() => router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`)}
+                className="w-full"
+                size="lg"
+              >
+                Iniciar Sesión
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push('/')}
+                className="w-full"
+              >
+                Volver al Inicio
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       );
     }
@@ -138,49 +83,44 @@ export function withAuth<P extends object>(
     // Si requiere email verificado y no lo está
     if (requireEmailVerification && !isEmailVerified) {
       return (
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted">
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background to-muted p-4">
           <Card className="w-full max-w-md border-yellow-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-yellow-600">
-                <AlertCircle className="h-6 w-6" />
-                Email no verificado
-              </CardTitle>
+            <CardHeader className="text-center">
+              <AlertCircle className="h-12 w-12 text-yellow-600 mx-auto mb-2" />
+              <CardTitle className="text-2xl text-yellow-600">Email no verificado</CardTitle>
+              <CardDescription>
+                Debes verificar tu email para continuar
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                Debes verificar tu email para acceder a esta página.
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => router.push(redirectUnverified)}
-                >
-                  Verificar Email
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => router.push('/')}
-                >
-                  Volver al Inicio
-                </Button>
-              </div>
+            <CardContent className="space-y-4">
+              <Button
+                variant="outline"
+                onClick={() => router.push('/auth/verify-email')}
+                className="w-full"
+              >
+                Verificar Email
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => router.push('/')}
+                className="w-full"
+              >
+                Volver al Inicio
+              </Button>
             </CardContent>
           </Card>
         </div>
       );
     }
 
-    // Usuario autenticado - renderizar componente
     return <WrappedComponent {...props} />;
   };
 }
 
-// HOCs específicos para diferentes casos de uso
+// HOCs específicos
 export function withAdmin<P extends object>(WrappedComponent: React.ComponentType<P>) {
   return withAuth(WrappedComponent, {
     requireEmailVerification: true,
-    allowedRoles: ['admin'],
-    redirectUnauthorized: '/',
   });
 }
 
@@ -188,71 +128,4 @@ export function withEmailVerification<P extends object>(WrappedComponent: React.
   return withAuth(WrappedComponent, {
     requireEmailVerification: true,
   });
-}
-
-export function withModerator<P extends object>(WrappedComponent: React.ComponentType<P>) {
-  return withAuth(WrappedComponent, {
-    requireEmailVerification: true,
-    allowedRoles: ['moderator', 'admin'],
-  });
-}
-
-// Componente para verificar permisos condicionalmente
-export function AuthGuard({
-  children,
-  requireEmailVerification = false,
-  allowedRoles,
-  fallback,
-}: {
-  children: React.ReactNode;
-  requireEmailVerification?: boolean;
-  allowedRoles?: ('user' | 'admin' | 'moderator')[];
-  fallback?: React.ReactNode;
-}) {
-  const { user, loading, isEmailVerified } = useAuth();
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [roleLoading, setRoleLoading] = useState(true);
-
-  useEffect(() => {
-    if (user) {
-      const getUserRole = async () => {
-        try {
-          const response = await fetch(`/api/user/${user.uid}/role`)
-          if (response.ok) {
-            const data = await response.json()
-            setUserRole(data.role)
-          }
-        } catch {
-          setUserRole('user')
-        } finally {
-          setRoleLoading(false)
-        }
-      }
-      getUserRole()
-    } else {
-      setRoleLoading(false)
-    }
-  }, [user]);
-
-  if (loading || roleLoading) {
-    return fallback || (
-      <div className="flex items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
-  if (requireEmailVerification && !isEmailVerified) {
-    return null;
-  }
-
-  if (allowedRoles && userRole && !allowedRoles.includes(userRole as any)) {
-    return null;
-  }
-
-  return <>{children}</>;
 }

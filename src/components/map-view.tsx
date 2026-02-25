@@ -197,16 +197,7 @@ export function MapView({
 
     events.forEach((event) => {
       // Verificar que las coordenadas existan y sean válidas
-      console.log('MapView: Processing event:', { 
-        id: event.id, 
-        title: event.title, 
-        lat: event.lat, 
-        lng: event.lng,
-        address: event.address 
-      });
-      
       if (event.lat && event.lng && !isNaN(event.lat) && !isNaN(event.lng)) {
-        console.log('MapView: Adding marker at:', [event.lat, event.lng]);
         const marker = L.marker([event.lat, event.lng], {
           icon: createCustomIcon(categoryColors[event.category] || "#c2410c"),
         })
