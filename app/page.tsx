@@ -15,9 +15,9 @@ import { CATEGORIES, CATEGORY_COLORS, type Category } from "@/lib/firebase/event
 import { useEvents } from '@/hooks/use-events'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGeolocation } from '@/hooks/use-geolocation'
-import { usePullToRefresh } from '@/hooks/use-pull-to-refresh'
-import { PullToRefreshContainer } from '@/components/ui/pull-to-refresh'
+import { usePullToRefresh, PullToRefreshContainer } from '@/components/ui/pull-to-refresh'
 import { useUnifiedToast } from '@/hooks/use-unified-toast'
+import { VirtualGrid } from '@/components/ui/virtual-grid'
 import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar, Star, Search, LogIn, RefreshCcw, AlertCircle } from 'lucide-react'
 import { ErrorBoundary } from '@/components/error-boundary'
 
@@ -553,23 +553,31 @@ export default function HomePage() {
                   <SkeletonCard key={i} />
                 ))}
               </div>
-            ) : (
+            ) : filteredEvents.length > 0 ? (
               <PullToRefreshContainer
                 onRefresh={handleRefresh}
                 enabled={isMobile}
                 threshold={100}
               >
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {filteredEvents.map((event) => (
+                {/* Virtual Grid para listas largas */}
+                <VirtualGrid
+                  items={filteredEvents}
+                  itemHeight={280}
+                  columns={isMobile ? 1 : window.innerWidth >= 1280 ? 4 : window.innerWidth >= 768 ? 2 : 3}
+                  gap={24}
+                  enabled={filteredEvents.length > 20}
+                  renderItem={(event) => (
                     <EventCard
                       key={event.id}
                       event={event}
                       onDelete={refetch}
                     />
-                  ))}
-                </div>
+                  )}
+                  itemKey={(event) => event.id}
+                  className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                />
               </PullToRefreshContainer>
-            )}
+            ) : null}
 
             {/* Empty state mejorado */}
             {!eventsLoading && filteredEvents.length === 0 && (

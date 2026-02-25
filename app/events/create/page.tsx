@@ -4,11 +4,12 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase/client';
 import { collection, addDoc, serverTimestamp, GeoPoint } from 'firebase/firestore';
-import { geohashForLocation } from 'geofire-common'; // para generar geohash
+import { geohashForLocation } from 'geofire-common';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import Image from 'next/image';
 import ImageUpload from '@/components/events/ImageUpload';
 
 export default function CreateEventPage() {
@@ -96,7 +97,17 @@ export default function CreateEventPage() {
             <div>
               <Label>Flyer (imagen)</Label>
               <ImageUpload onUpload={(url: string) => setFlyerUrl(url)} />
-              {flyerUrl && <img src={flyerUrl} alt="flyer" className="mt-2 h-32 object-cover" />}
+              {flyerUrl && (
+                <div className="relative mt-2 h-32 w-full overflow-hidden rounded-lg">
+                  <Image
+                    src={flyerUrl}
+                    alt="flyer del evento"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 300px"
+                  />
+                </div>
+              )}
             </div>
 
             <div>
