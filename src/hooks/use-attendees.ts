@@ -6,19 +6,30 @@ import {
   getEventAttendees,
   isUserAttendee,
   getAttendeeStats,
+  joinWaitlist,
+  leaveWaitlist,
   type Attendee,
   type AttendeeStats,
 } from '@/lib/firebase/attendees';
-import { useToast } from './use-toast';
+import { useUnifiedToast } from './use-unified-toast';
 
-export function useAttendees(eventId: string) {
+interface UseAttendeesOptions {
+  maxAttendees?: number
+}
+
+export function useAttendees(eventId: string, options: UseAttendeesOptions = {}) {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const toast = useUnifiedToast();
+  const { maxAttendees } = options;
   const [attendees, setAttendees] = useState<Attendee[]>([]);
+  const [waitlist, setWaitlist] = useState<Attendee[]>([]);
   const [stats, setStats] = useState<AttendeeStats | null>(null);
   const [isAttending, setIsAttending] = useState(false);
+  const [isOnWaitlist, setIsOnWaitlist] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isEventFull, setIsEventFull] = useState(false);
+  const [availableSpots, setAvailableSpots] = useState(0);
 
   // Cargar asistentes al montar
   useEffect(() => {
@@ -27,37 +38,57 @@ export function useAttendees(eventId: string) {
     const loadAttendees = async () => {
       try {
         setIsLoading(true);
-        const [attendeesList, userIsAttending, attendeeStats] = await Promise.all([
+        const [attendeesList, userIsAttending, attendeeStats, userIsOnWaitlist] = await Promise.all([
           getEventAttendees(eventId),
           user ? isUserAttendee(eventId, user.uid) : false,
           getAttendeeStats(eventId),
+          user ? isUserAttendee(eventId, user.uid, 'waitlist') : false,
         ]);
 
-        setAttendees(attendeesList.filter(a => a.status === 'confirmed'));
+        const confirmed = attendeesList.filter(a => a.status === 'confirmed');
+        const waitlisted = attendeesList.filter(a => a.status === 'waitlist');
+        
+        setAttendees(confirmed);
+        setWaitlist(waitlisted);
         setIsAttending(userIsAttending);
+        setIsOnWaitlist(userIsOnWaitlist);
         setStats(attendeeStats);
+
+        // Calcular lugares disponibles
+        if (maxAttendees) {
+          const spots = maxAttendees - attendeeStats.confirmed;
+          setAvailableSpots(Math.max(0, spots));
+          setIsEventFull(spots <= 0);
+        } else {
+          setIsEventFull(false);
+          setAvailableSpots(Infinity);
+        }
       } catch (error) {
         console.error('Error loading attendees:', error);
-        toast({
-          title: 'Error',
-          description: 'No se pudieron cargar los asistentes',
-          variant: 'destructive',
-        });
+        toast.error('Error al cargar asistentes');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadAttendees();
-  }, [eventId, user?.uid]);
+  }, [eventId, user?.uid, maxAttendees]);
 
   // Confirmar asistencia
   const handleConfirmAttendance = async () => {
     if (!user || !eventId) {
-      toast({
-        title: 'Error',
-        description: 'Debes iniciar sesión para registrarte',
-        variant: 'destructive',
+      toast.error('Debes iniciar sesión para registrarte');
+      return;
+    }
+
+    // Verificar si está lleno
+    if (isEventFull && !isOnWaitlist) {
+      toast.warning('Evento completo', {
+        description: 'No hay más lugares disponibles. ¿Querés unirte a la lista de espera?',
+        action: {
+          label: 'Unirme',
+          onClick: handleJoinWaitlist,
+        },
       });
       return;
     }
@@ -72,19 +103,61 @@ export function useAttendees(eventId: string) {
       );
 
       setIsAttending(true);
-      setStats(prev => prev ? { ...prev, confirmed: prev.confirmed + 1, total: prev.total + 1 } : null);
+      setStats(prev => prev ? { ...prev, confirmed: prev.confirmed + 1 } : null);
+      setAvailableSpots(prev => Math.max(0, prev - 1));
 
-      toast({
-        title: '¡Registro exitoso!',
+      toast.success('¡Registro exitoso!', {
         description: 'Te has registrado correctamente en el evento',
       });
     } catch (error) {
       console.error('Error confirming attendance:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'No se pudo confirmar la asistencia',
-        variant: 'destructive',
+      toast.error('Error al confirmar asistencia');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  // Unirse a lista de espera
+  const handleJoinWaitlist = async () => {
+    if (!user || !eventId) {
+      toast.error('Debes iniciar sesión');
+      return;
+    }
+
+    try {
+      setIsConfirming(true);
+      await joinWaitlist(
+        eventId,
+        user.uid,
+        user.displayName || 'Usuario',
+        user.photoURL || undefined
+      );
+
+      setIsOnWaitlist(true);
+      toast.success('Te uniste a la lista de espera', {
+        description: 'Te avisaremos si se libera un lugar',
       });
+    } catch (error) {
+      console.error('Error joining waitlist:', error);
+      toast.error('Error al unirse a la lista de espera');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  // Salir de lista de espera
+  const handleLeaveWaitlist = async () => {
+    if (!user || !eventId) return;
+
+    try {
+      setIsConfirming(true);
+      await leaveWaitlist(eventId, user.uid);
+
+      setIsOnWaitlist(false);
+      toast.info('Saliste de la lista de espera');
+    } catch (error) {
+      console.error('Error leaving waitlist:', error);
+      toast.error('Error al salir de la lista de espera');
     } finally {
       setIsConfirming(false);
     }
@@ -119,11 +192,18 @@ export function useAttendees(eventId: string) {
 
   return {
     attendees,
+    waitlist,
     stats,
     isAttending,
+    isOnWaitlist,
     isLoading,
     isConfirming,
+    isEventFull,
+    availableSpots,
+    maxAttendees,
     confirmAttendance: handleConfirmAttendance,
     cancelAttendance: handleCancelAttendance,
+    joinWaitlist: handleJoinWaitlist,
+    leaveWaitlist: handleLeaveWaitlist,
   };
 }

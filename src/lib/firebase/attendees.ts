@@ -7,7 +7,7 @@ export interface Attendee {
   userId: string;
   userName: string;
   userPhotoURL?: string;
-  status: 'confirmed' | 'pending' | 'cancelled';
+  status: 'confirmed' | 'pending' | 'cancelled' | 'waitlist';
   joinedAt?: Timestamp;
   role?: 'attendee' | 'organizer';
 }
@@ -188,7 +188,7 @@ export const getConfirmedAttendees = async (eventId: string): Promise<Attendee[]
 /**
  * Verificar si un usuario es asistente de un evento
  */
-export const isUserAttendee = async (eventId: string, userId: string): Promise<boolean> => {
+export const isUserAttendee = async (eventId: string, userId: string, status: 'confirmed' | 'waitlist' | 'any' = 'confirmed'): Promise<boolean> => {
   try {
     const q = query(
       collection(db, 'attendees'),
@@ -202,8 +202,12 @@ export const isUserAttendee = async (eventId: string, userId: string): Promise<b
     let isAttendee = false;
     querySnapshot.forEach((doc) => {
       const data = doc.data();
-      if (data.userId === userId && data.status === 'confirmed') {
-        isAttendee = true;
+      if (data.userId === userId) {
+        if (status === 'any') {
+          isAttendee = true;
+        } else if (data.status === status) {
+          isAttendee = true;
+        }
       }
     });
 
@@ -279,5 +283,135 @@ export const removeAttendee = async (attendeeId: string, eventId: string): Promi
   } catch (error) {
     console.error('Error removing attendee:', error);
     throw new Error('No se pudo eliminar al asistente');
+  }
+};
+
+/**
+ * Unirse a la lista de espera de un evento
+ */
+export const joinWaitlist = async (eventId: string, userId: string, userName: string, userPhotoURL?: string): Promise<string> => {
+  try {
+    // Verificar si ya está en waitlist o confirmado
+    const q = query(
+      collection(db, 'attendees'),
+      where('eventId', '==', eventId)
+    );
+    const querySnapshot = await getDocs(q);
+
+    let existingDoc: any = null;
+    querySnapshot.forEach((doc) => {
+      if (doc.data().userId === userId) {
+        existingDoc = doc;
+      }
+    });
+
+    if (existingDoc) {
+      const data = existingDoc.data();
+      if (data.status === 'waitlist') {
+        throw new Error('Ya estás en la lista de espera');
+      }
+      if (data.status === 'confirmed') {
+        throw new Error('Ya estás registrado en este evento');
+      }
+
+      // Actualizar registro existente
+      await updateDoc(doc(db, 'attendees', existingDoc.id), {
+        status: 'waitlist',
+        joinedAt: serverTimestamp(),
+      });
+
+      return existingDoc.id;
+    }
+
+    // Crear nuevo registro en waitlist
+    const attendeeData: Omit<Attendee, 'id'> = {
+      eventId,
+      userId,
+      userName,
+      userPhotoURL: userPhotoURL || '',
+      status: 'waitlist',
+      joinedAt: serverTimestamp(),
+      role: 'attendee',
+    };
+
+    const docRef = await addDoc(collection(db, 'attendees'), attendeeData);
+    return docRef.id;
+  } catch (error) {
+    console.error('[Waitlist] Error joining waitlist:', error);
+    throw new Error('No se pudo unir a la lista de espera');
+  }
+};
+
+/**
+ * Salir de la lista de espera
+ */
+export const leaveWaitlist = async (eventId: string, userId: string): Promise<void> => {
+  try {
+    const q = query(
+      collection(db, 'attendees'),
+      where('eventId', '==', eventId)
+    );
+    const querySnapshot = await getDocs(q);
+
+    let attendeeDoc: any = null;
+    querySnapshot.forEach((doc) => {
+      if (doc.data().userId === userId) {
+        attendeeDoc = doc;
+      }
+    });
+
+    if (!attendeeDoc) {
+      throw new Error('No estás en la lista de espera');
+    }
+
+    const data = attendeeDoc.data();
+    if (data.status !== 'waitlist') {
+      throw new Error('No estás en la lista de espera');
+    }
+
+    await deleteDoc(doc(db, 'attendees', attendeeDoc.id));
+  } catch (error) {
+    console.error('[Waitlist] Error leaving waitlist:', error);
+    throw new Error('No se pudo salir de la lista de espera');
+  }
+};
+
+/**
+ * Promover de waitlist a confirmado (cuando se libera un lugar)
+ */
+export const promoteFromWaitlist = async (eventId: string, userId: string): Promise<void> => {
+  try {
+    const q = query(
+      collection(db, 'attendees'),
+      where('eventId', '==', eventId)
+    );
+    const querySnapshot = await getDocs(q);
+
+    let attendeeDoc: any = null;
+    querySnapshot.forEach((doc) => {
+      if (doc.data().userId === userId) {
+        attendeeDoc = doc;
+      }
+    });
+
+    if (!attendeeDoc) {
+      throw new Error('Usuario no encontrado en waitlist');
+    }
+
+    const data = attendeeDoc.data();
+    if (data.status !== 'waitlist') {
+      throw new Error('El usuario no está en la lista de espera');
+    }
+
+    await updateDoc(doc(db, 'attendees', attendeeDoc.id), {
+      status: 'confirmed',
+    });
+
+    await updateDoc(doc(db, 'events', eventId), {
+      attendees: increment(1),
+    });
+  } catch (error) {
+    console.error('[Waitlist] Error promoting from waitlist:', error);
+    throw new Error('No se pudo promover al usuario');
   }
 };
