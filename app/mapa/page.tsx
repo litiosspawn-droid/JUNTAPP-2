@@ -71,6 +71,8 @@ const CATEGORY_ICON_COMPONENTS: Record<string, React.ComponentType<any>> = {
 
 export default function MapaPage() {
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map')
+  const [userLocation, setUserLocation] = useState<[number, number] | undefined>(undefined)
+  const [locationLoading, setLocationLoading] = useState(true)
   const [activeFilters, setActiveFilters] = useState({
     categories: [] as Category[],
     subcategory: "",
@@ -79,6 +81,36 @@ export default function MapaPage() {
     dateTo: "",
     searchQuery: "",
   })
+
+  // Request user location on mount
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      console.warn('Geolocation not supported')
+      setLocationLoading(false)
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userPos: [number, number] = [
+          position.coords.latitude,
+          position.coords.longitude
+        ]
+        setUserLocation(userPos)
+        console.log('User location found:', userPos)
+        setLocationLoading(false)
+      },
+      (error) => {
+        console.warn('Error getting user location:', error.message)
+        setLocationLoading(false)
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000
+      }
+    )
+  }, [])
 
   // Obtener eventos
   const { events, loading, error } = useEvents()
@@ -377,8 +409,10 @@ export default function MapaPage() {
             <MapView
               events={filteredEvents}
               className="h-full w-full"
-              zoom={13}
-              center={[-34.6037, -58.3816]}
+              zoom={userLocation ? 14 : 13}
+              center={userLocation || [-34.6037, -58.3816]}
+              showUserLocation={true}
+              userLocation={userLocation}
             />
           ) : (
             <div className="h-full overflow-y-auto p-4">

@@ -25,7 +25,9 @@ import {
   ArrowLeft,
   CheckCircle2,
   Circle,
-  AlertCircle
+  AlertCircle,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { CATEGORY_COLORS } from '@/lib/firebase/events';
 
@@ -53,6 +55,8 @@ export default function EventPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
 
   const {
     attendees,
@@ -74,7 +78,7 @@ export default function EventPage() {
         }
 
         const eventData = eventDoc.data() as any;
-        
+
         // Normalizar datos del evento (manejar creatorId vs createdBy)
         const normalizedEvent: Event = {
           id: eventDoc.id,
@@ -90,8 +94,13 @@ export default function EventPage() {
           time: eventData.time,
           tags: eventData.tags || [],
         };
-        
+
         setEvent(normalizedEvent);
+        
+        // Check if current user is the creator
+        if (user && (eventData.createdBy === user.uid || eventData.creatorId === user.uid)) {
+          setIsCreator(true);
+        }
       } catch (error: any) {
         console.error('Error fetching event:', error);
         setError(error.message || 'Error al cargar el evento');
@@ -101,7 +110,7 @@ export default function EventPage() {
     };
 
     fetchEvent();
-  }, [id]);
+  }, [id, user]);
 
   const handleToggleAttendance = async () => {
     if (isAttending) {
@@ -115,6 +124,35 @@ export default function EventPage() {
         description: 'Te has unido al evento exitosamente',
       });
     }
+  };
+
+  const handleDelete = async () => {
+    if (!user) return;
+    
+    if (!confirm('¿Estás seguro de que quieres eliminar este evento? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      const { deleteEvent } = await import('@/lib/firebase/events');
+      await deleteEvent(id, user.uid);
+      toast.success('Evento eliminado', {
+        description: 'El evento ha sido eliminado correctamente',
+      });
+      router.push('/');
+    } catch (error: any) {
+      console.error('Error deleting event:', error);
+      toast.error('Error al eliminar', {
+        description: error.message || 'No se pudo eliminar el evento',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleEdit = () => {
+    router.push(`/events/${id}/edit`);
   };
 
   const handleShare = async () => {
@@ -274,6 +312,29 @@ export default function EventPage() {
               {event.category}
             </Badge>
             <h1 className="text-3xl md:text-4xl font-bold">{event.title}</h1>
+          </div>
+        )}
+
+        {/* Creator Actions */}
+        {isCreator && (
+          <div className="mb-6 flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleEdit}
+              className="gap-2"
+            >
+              <Edit className="h-4 w-4" />
+              Editar Evento
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              className="gap-2"
+              disabled={isDeleting}
+            >
+              <Trash2 className="h-4 w-4" />
+              {isDeleting ? 'Eliminando...' : 'Eliminar Evento'}
+            </Button>
           </div>
         )}
 
