@@ -38,80 +38,67 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // Persistencia mejorada - esperar a que Firebase inicialice
-    const initializeAuth = async () => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
-        // Esperar a que Firebase esté listo
-        await auth.authStateReady();
-        
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-          try {
-            setUser(user);
-            
-            if (user) {
-              // Solo recargar si pasó más de 5 minutos
-              const lastRefresh = localStorage.getItem('authLastRefresh');
-              const now = Date.now();
-              const shouldRefresh = !lastRefresh || (now - parseInt(lastRefresh)) > 5 * 60 * 1000;
-              
-              if (shouldRefresh) {
-                await user.reload();
-                localStorage.setItem('authLastRefresh', now.toString());
-              }
-              
-              setIsEmailVerified(user.emailVerified);
+        setUser(user);
 
-              // Ensure user document exists in Firestore (sin bloquear)
-              const userRef = doc(db, 'users', user.uid);
-              const userDoc = await getDoc(userRef);
+        if (user) {
+          // Solo recargar si pasó más de 5 minutos
+          const lastRefresh = localStorage.getItem('authLastRefresh');
+          const now = Date.now();
+          const shouldRefresh = !lastRefresh || (now - parseInt(lastRefresh)) > 5 * 60 * 1000;
 
-              if (!userDoc.exists()) {
-                await setDoc(userRef, {
-                  uid: user.uid,
-                  email: user.email,
-                  displayName: user.displayName || user.email?.split('@')[0],
-                  photoURL: user.photoURL,
-                  bio: '',
-                  location: '',
-                  website: '',
-                  banned: false,
-                  role: 'user',
-                  emailVerified: user.emailVerified,
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                }, { merge: true });
-              } else {
-                // Update email verified status in Firestore
-                await updateDoc(userRef, {
-                  emailVerified: user.emailVerified,
-                  lastLogin: new Date(),
-                });
-              }
-            } else {
-              setIsEmailVerified(false);
-              localStorage.removeItem('authLastRefresh');
-            }
-            
-            setInitialized(true);
-          } catch (error) {
-            console.error('Error in onAuthStateChanged:', error);
-            setInitialized(true);
-          } finally {
-            setLoading(false);
+          if (shouldRefresh) {
+            await user.reload();
+            localStorage.setItem('authLastRefresh', now.toString());
           }
-        });
 
-        return () => {
-          unsubscribe();
-          setInitialized(false);
-        };
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        setLoading(false);
+          setIsEmailVerified(user.emailVerified);
+
+          // Ensure user document exists in Firestore (sin bloquear)
+          const userRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userRef);
+
+          if (!userDoc.exists()) {
+            await setDoc(userRef, {
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName || user.email?.split('@')[0],
+              photoURL: user.photoURL,
+              bio: '',
+              location: '',
+              website: '',
+              banned: false,
+              role: 'user',
+              emailVerified: user.emailVerified,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            }, { merge: true });
+          } else {
+            // Update email verified status in Firestore
+            await updateDoc(userRef, {
+              emailVerified: user.emailVerified,
+              lastLogin: new Date(),
+            });
+          }
+        } else {
+          setIsEmailVerified(false);
+          localStorage.removeItem('authLastRefresh');
+        }
+
         setInitialized(true);
+      } catch (error) {
+        console.error('Error in onAuthStateChanged:', error);
+        setInitialized(true);
+      } finally {
+        setLoading(false);
       }
-    };
+    });
 
-    initializeAuth();
+    return () => {
+      unsubscribe();
+      setInitialized(false);
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
