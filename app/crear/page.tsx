@@ -116,10 +116,16 @@ function CreateEventPageContent() {
       errors.date = 'La fecha es obligatoria'
       isValid = false
     } else {
-      const eventDate = new Date(formData.date)
+      // Comparar fechas correctamente usando solo la parte de la fecha
+      const eventDate = new Date(formData.date + 'T00:00:00')
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-      if (eventDate < today) {
+      
+      // Crear fecha de hoy sin hora para comparar correctamente
+      const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+      const eventDateOnly = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate())
+      
+      if (eventDateOnly < todayDateOnly) {
         errors.date = 'La fecha no puede ser anterior a hoy'
         isValid = false
       }
