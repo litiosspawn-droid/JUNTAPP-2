@@ -296,7 +296,7 @@ export default function HomePage() {
                       </div>
                       <div className="text-center p-4 rounded-lg bg-card/50 backdrop-blur-sm border">
                         <div className="text-2xl font-bold text-primary">{homepageStats.totalAttendees}</div>
-                        <div className="text-sm text-muted-foreground">Asistentes</div>
+                        <div className="text-sm text-muted-foreground">Asistencias</div>
                       </div>
                     </div>
                   </FadeIn>
@@ -475,7 +475,7 @@ export default function HomePage() {
                         </div>
                         <div className="flex items-center gap-2">
                           <UsersIcon className="h-4 w-4" />
-                          <span>{event.attendees} asistentes</span>
+                          <span>{event.attendees} asistencias</span>
                         </div>
                       </div>
                     </CardContent>

@@ -147,7 +147,7 @@ export const EventCard = memo(function EventCard({ event, onDelete }: { event: E
               {/* Attendees */}
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{Number(event.attendees || 0).toString()} asistentes</span>
+                <span>{Number(event.attendees || 0).toString()} asistencias</span>
               </div>
             </div>
 
