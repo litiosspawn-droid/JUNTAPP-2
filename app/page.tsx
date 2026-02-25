@@ -7,6 +7,7 @@ import dynamic from "next/dynamic"
 import { Header, Footer } from "@/components/layout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton"
 import { EmptyPreset } from '@/components/ui/empty'
 import { CATEGORIES, CATEGORY_COLORS, type Category } from "@/lib/firebase/events"

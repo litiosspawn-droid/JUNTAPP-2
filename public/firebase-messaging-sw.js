@@ -47,11 +47,11 @@ try {
   // Manejar clicks en notificaciones
   self.addEventListener('notificationclick', (event) => {
     console.log('[firebase-messaging-sw.js] Notification click:', event);
-  
+
     event.notification.close();
-  
+
     const urlToOpen = event.notification.data?.url || '/';
-  
+
     event.waitUntil(
       clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
         // Verificar si ya hay una ventana abierta con la URL
@@ -68,7 +68,7 @@ try {
             return client;
           }
         }
-  
+
         // Si no hay ventana abierta, abrir una nueva
         if (clients.openWindow) {
           return clients.openWindow(urlToOpen);
@@ -76,16 +76,16 @@ try {
       })
     );
   });
-  
+
   // Manejar mensajes de la aplicación principal
-  navigator.serviceWorker.addEventListener('message', (event) => {
+  self.addEventListener('message', (event) => {
     console.log('[firebase-messaging-sw.js] Message received:', event.data);
-    
+
     if (event.data && event.data.type === 'SKIP_WAITING') {
       self.skipWaiting();
     }
   });
-  
+
   console.log('[firebase-messaging-sw.js] Service Worker initialized successfully');
   
 } catch (error) {
