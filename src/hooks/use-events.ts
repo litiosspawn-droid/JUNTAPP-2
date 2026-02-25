@@ -10,17 +10,29 @@ export function useEvents(category?: Category) {
     try {
       setLoading(true);
       setError(null);
-      
+
+      console.log('📡 Loading events, category:', category);
+
       let eventsData: Event[];
       if (category) {
         eventsData = await getEventsByCategory(category);
       } else {
         eventsData = await getEvents();
       }
-      
+
+      console.log('✅ Events loaded:', eventsData.length);
+      console.log('📦 Events data:', eventsData);
+
       setEvents(eventsData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar los eventos');
+      console.error('❌ Error loading events:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Error al cargar los eventos';
+      setError(errorMessage);
+      
+      // Si es error de índices, dar mensaje más claro
+      if (errorMessage.includes('index')) {
+        setError('Error de índice de Firestore. Por favor, contacta al administrador.');
+      }
     } finally {
       setLoading(false);
     }
