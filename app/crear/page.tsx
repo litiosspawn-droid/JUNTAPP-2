@@ -21,8 +21,7 @@ import { checkRateLimit, RATE_LIMITS, RateLimitError } from '@/lib/rate-limit'
 import dynamic from "next/dynamic"
 
 // Forzar renderizado dinámico para evitar problemas con autenticación
-export const dynamic = 'force-dynamic'
-export const ssr = false
+export const dynamicIO = true
 
 const MapView = dynamic(() => import("@/components/map-view").then((mod) => mod.MapView), {
   ssr: false,
