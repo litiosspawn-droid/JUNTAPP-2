@@ -156,13 +156,20 @@ export default function MapaPage() {
 
   // Funciones de filtro
   const toggleCategory = (category: Category) => {
-    setActiveFilters(prev => ({
-      ...prev,
-      categories: prev.categories.includes(category)
+    setActiveFilters(prev => {
+      const newCategories = prev.categories.includes(category)
         ? prev.categories.filter(c => c !== category)
-        : [...prev.categories, category],
-      subcategory: prev.categories.length === 0 ? "" : prev.subcategory
-    }))
+        : [...prev.categories, category]
+      
+      // Reset subcategory if not exactly one category selected
+      const newSubcategory = newCategories.length === 1 ? prev.subcategory : ""
+      
+      return {
+        ...prev,
+        categories: newCategories,
+        subcategory: newSubcategory
+      }
+    })
   }
 
   const toggleTag = (tag: string) => {
@@ -270,19 +277,21 @@ export default function MapaPage() {
                 <div className="space-y-2">
                   <Label>Subcategorías</Label>
                   <Select
-                    value={activeFilters.subcategory}
-                    onValueChange={(value) => setActiveFilters(prev => ({ ...prev, subcategory: value }))}
+                    value={activeFilters.subcategory || "all"}
+                    onValueChange={(value) => setActiveFilters(prev => ({ ...prev, subcategory: value === "all" ? "" : value }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Todas las subcategorías" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas</SelectItem>
-                      {SUBCATEGORIES[activeFilters.categories[0]].map((subcategory) => (
-                        <SelectItem key={subcategory} value={subcategory}>
-                          {subcategory}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="all">Todas</SelectItem>
+                      {SUBCATEGORIES[activeFilters.categories[0]]
+                        .filter((sub) => sub && sub.trim() !== "")
+                        .map((subcategory) => (
+                          <SelectItem key={subcategory} value={subcategory}>
+                            {subcategory}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
