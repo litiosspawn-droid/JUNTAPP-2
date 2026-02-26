@@ -1,152 +1,397 @@
-import { collection, doc, addDoc, updateDoc, deleteDoc, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
-import { db } from './client';
+/**
+ * Firebase functions para el sistema de calificaciones y reseñas
+ */
 
-export interface EventRating {
-  id?: string;
-  eventId: string;
-  userId: string;
-  userName: string;
-  userPhotoURL?: string;
-  rating: number; // 1-5 stars
-  review?: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  serverTimestamp,
+  Timestamp,
+  increment,
+  runTransaction,
+} from 'firebase/firestore'
+import { db } from './client'
+import type { EventRating, EventRatingSummary, UserRating, UserRatingSummary } from '@/types'
+
+// ============================================================================
+// Event Ratings
+// ============================================================================
+
+/**
+ * Agrega o actualiza una calificación de evento
+ */
+export async function submitEventRating(
+  eventId: string,
+  userId: string,
+  userName: string,
+  userPhotoURL: string | undefined,
+  rating: number,
+  comment: string,
+  dimensions: {
+    quality: number
+    organization: number
+    location: number
+  },
+  photos?: string[]
+): Promise<void> {
+  const ratingRef = doc(collection(db, 'events', eventId, 'ratings'))
+  
+  await setDoc(ratingRef, {
+    eventId,
+    userId,
+    userName,
+    userPhotoURL,
+    rating,
+    comment,
+    photos: photos || [],
+    ratings: dimensions,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    helpfulCount: 0,
+    notHelpfulCount: 0,
+    isVerified: true, // Verificar que el usuario asistió
+    isFlagged: false,
+  }, { merge: true })
+
+  // Actualizar resumen del evento
+  await updateEventRatingSummary(eventId)
 }
 
-export interface EventRatingStats {
-  totalRatings: number;
-  averageRating: number;
-  ratingDistribution: { [key: number]: number }; // 1-5 stars count
+/**
+ * Actualiza el resumen de calificaciones de un evento
+ */
+async function updateEventRatingSummary(eventId: string): Promise<void> {
+  const ratingsRef = collection(db, 'events', eventId, 'ratings')
+  const snapshot = await getDocs(ratingsRef)
+  
+  const ratings: EventRating[] = []
+  snapshot.forEach((doc) => {
+    const data = doc.data()
+    ratings.push({
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate() || new Date(),
+    } as EventRating)
+  })
+
+  // Calcular estadísticas
+  const totalRatings = ratings.length
+  const averageRating = totalRatings > 0
+    ? ratings.reduce((sum, r) => sum + r.rating, 0) / totalRatings
+    : 0
+
+  const ratingDistribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+  let totalQuality = 0
+  let totalOrganization = 0
+  let totalLocation = 0
+  let totalReviews = 0
+  let totalPhotos = 0
+
+  ratings.forEach((r) => {
+    ratingDistribution[r.rating as keyof typeof ratingDistribution]++
+    totalQuality += r.ratings.quality
+    totalOrganization += r.ratings.organization
+    totalLocation += r.ratings.location
+    if (r.comment) totalReviews++
+    if (r.photos && r.photos.length > 0) totalPhotos += r.photos.length
+  })
+
+  const summary: EventRatingSummary = {
+    eventId,
+    averageRating: Math.round(averageRating * 10) / 10,
+    totalRatings,
+    ratingDistribution,
+    dimensionAverages: {
+      quality: totalRatings > 0 ? Math.round(totalQuality / totalRatings * 10) / 10 : 0,
+      organization: totalRatings > 0 ? Math.round(totalOrganization / totalRatings * 10) / 10 : 0,
+      location: totalRatings > 0 ? Math.round(totalLocation / totalRatings * 10) / 10 : 0,
+    },
+    recommendedPercentage: totalRatings > 0
+      ? Math.round((ratingDistribution[5] + ratingDistribution[4]) / totalRatings * 100)
+      : 0,
+    totalReviews,
+    totalPhotos,
+  }
+
+  await setDoc(doc(db, 'eventRatingSummaries', eventId), summary)
 }
 
-// Crear o actualizar una valoración
-export async function createOrUpdateRating(rating: Omit<EventRating, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-  try {
-    // Verificar si el usuario ya valoró este evento
-    const existingRating = await getUserRatingForEvent(rating.eventId, rating.userId);
+/**
+ * Obtiene calificaciones de un evento
+ */
+export async function getEventRatings(
+  eventId: string,
+  limitCount: number = 10
+): Promise<EventRating[]> {
+  const ratingsRef = collection(db, 'events', eventId, 'ratings')
+  const q = query(
+    ratingsRef,
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  )
+  
+  const snapshot = await getDocs(q)
+  const ratings: EventRating[] = []
+  
+  snapshot.forEach((doc) => {
+    const data = doc.data()
+    ratings.push({
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate() || new Date(),
+    } as EventRating)
+  })
 
-    const ratingData = {
-      ...rating,
-      updatedAt: Timestamp.now(),
-    };
+  return ratings
+}
 
-    if (existingRating) {
-      // Actualizar valoración existente
-      await updateDoc(doc(db, 'eventRatings', existingRating.id!), ratingData);
-      return existingRating.id!;
-    } else {
-      // Crear nueva valoración
-      const docRef = await addDoc(collection(db, 'eventRatings'), {
-        ...ratingData,
-        createdAt: Timestamp.now(),
-      });
-      return docRef.id;
-    }
-  } catch (error) {
-    console.error('Error creating/updating rating:', error);
-    throw new Error('No se pudo guardar la valoración');
+/**
+ * Obtiene el resumen de calificaciones de un evento
+ */
+export async function getEventRatingSummary(eventId: string): Promise<EventRatingSummary | null> {
+  const summaryRef = doc(db, 'eventRatingSummaries', eventId)
+  const snapshot = await getDoc(summaryRef)
+  
+  if (snapshot.exists()) {
+    return snapshot.data() as EventRatingSummary
+  }
+  
+  return null
+}
+
+/**
+ * Marca una reseña como útil o no útil
+ */
+export async function rateReviewHelpfulness(
+  eventId: string,
+  ratingId: string,
+  userId: string,
+  isHelpful: boolean
+): Promise<void> {
+  const ratingRef = doc(db, 'events', eventId, 'ratings', ratingId)
+  
+  await updateDoc(ratingRef, {
+    [isHelpful ? 'helpfulCount' : 'notHelpfulCount']: increment(1),
+  })
+}
+
+/**
+ * Reporta una reseña inapropiada
+ */
+export async function flagEventRating(
+  eventId: string,
+  ratingId: string,
+  reason: string
+): Promise<void> {
+  const ratingRef = doc(db, 'events', eventId, 'ratings', ratingId)
+  
+  await updateDoc(ratingRef, {
+    isFlagged: true,
+    flaggedReason: reason,
+  })
+}
+
+/**
+ * Elimina una calificación (solo el autor o admin)
+ */
+export async function deleteEventRating(
+  eventId: string,
+  ratingId: string,
+  userId: string
+): Promise<void> {
+  const ratingRef = doc(db, 'events', eventId, 'ratings', ratingId)
+  const ratingDoc = await getDoc(ratingRef)
+  
+  if (!ratingDoc.exists()) return
+  
+  const data = ratingDoc.data()
+  
+  // Solo el autor puede eliminar
+  if (data.userId !== userId) {
+    throw new Error('No tienes permiso para eliminar esta calificación')
+  }
+  
+  await deleteDoc(ratingRef)
+  await updateEventRatingSummary(eventId)
+}
+
+/**
+ * Verifica si un usuario puede calificar un evento (asistió)
+ */
+export async function canUserRateEvent(
+  eventId: string,
+  userId: string
+): Promise<{ canRate: boolean; hasRated: boolean }> {
+  // Verificar si ya calificó
+  const ratingsRef = collection(db, 'events', eventId, 'ratings')
+  const q = query(
+    ratingsRef,
+    where('userId', '==', userId)
+  )
+  const snapshot = await getDocs(q)
+  
+  if (!snapshot.empty) {
+    return { canRate: false, hasRated: true }
+  }
+  
+  // Verificar si asistió al evento (revisar attendees)
+  const eventRef = doc(db, 'events', eventId)
+  const eventDoc = await getDoc(eventRef)
+  
+  if (!eventDoc.exists()) {
+    return { canRate: false, hasRated: false }
+  }
+  
+  const eventData = eventDoc.data()
+  const attendees = eventData.attendees || []
+  const hasAttended = attendees.includes(userId)
+  
+  // También verificar si es el creador
+  const isCreator = eventData.creatorId === userId
+  
+  return {
+    canRate: hasAttended || isCreator,
+    hasRated: false,
   }
 }
 
-// Obtener valoración de un usuario para un evento específico
-export async function getUserRatingForEvent(eventId: string, userId: string): Promise<EventRating | null> {
-  try {
-    const ratingsQuery = query(
-      collection(db, 'eventRatings'),
-      where('eventId', '==', eventId),
-      where('userId', '==', userId)
-    );
+// ============================================================================
+// User Ratings (Reputación)
+// ============================================================================
 
-    const snapshot = await getDocs(ratingsQuery);
-    if (!snapshot.empty) {
-      const doc = snapshot.docs[0];
-      return {
-        id: doc.id,
-        ...doc.data(),
-      } as EventRating;
-    }
-
-    return null;
-  } catch (error) {
-    console.error('Error getting user rating:', error);
-    return null;
+/**
+ * Agrega una calificación de usuario
+ */
+export async function submitUserRating(
+  ratedUserId: string,
+  raterUserId: string,
+  raterUserName: string,
+  rating: number,
+  comment: string,
+  eventId: string | undefined,
+  categories: {
+    reliability: number
+    friendliness: number
+    communication: number
   }
+): Promise<void> {
+  const ratingRef = doc(collection(db, 'users', ratedUserId, 'ratings'))
+  
+  await setDoc(ratingRef, {
+    ratedUserId,
+    raterUserId,
+    raterUserName,
+    rating,
+    comment,
+    eventId,
+    createdAt: serverTimestamp(),
+    categories,
+  })
+
+  // Actualizar resumen del usuario
+  await updateUserRatingSummary(ratedUserId)
 }
 
-// Obtener todas las valoraciones de un evento
-export async function getEventRatings(eventId: string, limit = 50): Promise<EventRating[]> {
-  try {
-    const ratingsQuery = query(
-      collection(db, 'eventRatings'),
-      where('eventId', '==', eventId),
-      orderBy('createdAt', 'desc')
-    );
+/**
+ * Actualiza el resumen de calificaciones de un usuario
+ */
+async function updateUserRatingSummary(userId: string): Promise<void> {
+  const ratingsRef = collection(db, 'users', userId, 'ratings')
+  const snapshot = await getDocs(ratingsRef)
+  
+  const ratings: UserRating[] = []
+  snapshot.forEach((doc) => {
+    const data = doc.data()
+    ratings.push({
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate() || new Date(),
+    } as UserRating)
+  })
 
-    const snapshot = await getDocs(ratingsQuery);
-    const ratings: EventRating[] = [];
+  // Calcular estadísticas
+  const totalRatings = ratings.length
+  const averageRating = totalRatings > 0
+    ? ratings.reduce((sum, r) => sum + r.rating, 0) / totalRatings
+    : 0
 
-    snapshot.forEach((doc) => {
-      ratings.push({
-        id: doc.id,
-        ...doc.data(),
-      } as EventRating);
-    });
+  let totalReliability = 0
+  let totalFriendliness = 0
+  let totalCommunication = 0
 
-    return ratings.slice(0, limit);
-  } catch (error) {
-    console.error('Error getting event ratings:', error);
-    return [];
+  ratings.forEach((r) => {
+    totalReliability += r.categories.reliability
+    totalFriendliness += r.categories.friendliness
+    totalCommunication += r.categories.communication
+  })
+
+  // Calcular reputation score (0-100)
+  const reputationScore = Math.round(
+    (averageRating / 5) * 100 * 0.6 + // 60% de la calificación promedio
+    Math.min(totalRatings * 2, 40) // 40% de la cantidad de calificaciones (max 40)
+  )
+
+  const summary: UserRatingSummary = {
+    userId,
+    averageRating: Math.round(averageRating * 10) / 10,
+    totalRatings,
+    eventsOrganized: 0, // Calcular por separado
+    eventsAttended: 0, // Calcular por separado
+    reputationScore,
+    badges: [],
   }
+
+  await setDoc(doc(db, 'userRatingSummaries', userId), summary, { merge: true })
 }
 
-// Obtener estadísticas de valoraciones de un evento
-export async function getEventRatingStats(eventId: string): Promise<EventRatingStats> {
-  try {
-    const ratings = await getEventRatings(eventId, 1000); // Get all ratings for stats
+/**
+ * Obtiene calificaciones de un usuario
+ */
+export async function getUserRatings(
+  userId: string,
+  limitCount: number = 10
+): Promise<UserRating[]> {
+  const ratingsRef = collection(db, 'users', userId, 'ratings')
+  const q = query(
+    ratingsRef,
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  )
+  
+  const snapshot = await getDocs(q)
+  const ratings: UserRating[] = []
+  
+  snapshot.forEach((doc) => {
+    const data = doc.data()
+    ratings.push({
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toDate() || new Date(),
+    } as UserRating)
+  })
 
-    if (ratings.length === 0) {
-      return {
-        totalRatings: 0,
-        averageRating: 0,
-        ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-      };
-    }
-
-    const totalRatings = ratings.length;
-    const sumRatings = ratings.reduce((sum, rating) => sum + rating.rating, 0);
-    const averageRating = Math.round((sumRatings / totalRatings) * 10) / 10; // Round to 1 decimal
-
-    const ratingDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-    ratings.forEach((rating) => {
-      ratingDistribution[rating.rating as keyof typeof ratingDistribution]++;
-    });
-
-    return {
-      totalRatings,
-      averageRating,
-      ratingDistribution,
-    };
-  } catch (error) {
-    console.error('Error getting event rating stats:', error);
-    return {
-      totalRatings: 0,
-      averageRating: 0,
-      ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
-    };
-  }
+  return ratings
 }
 
-// Eliminar una valoración
-export async function deleteRating(ratingId: string): Promise<boolean> {
-  try {
-    await updateDoc(doc(db, 'eventRatings', ratingId), {
-      rating: 0, // Soft delete by setting rating to 0
-      review: '[Eliminado por el usuario]',
-      updatedAt: Timestamp.now(),
-    });
-    return true;
-  } catch (error) {
-    console.error('Error deleting rating:', error);
-    return false;
+/**
+ * Obtiene el resumen de un usuario
+ */
+export async function getUserRatingSummary(userId: string): Promise<UserRatingSummary | null> {
+  const summaryRef = doc(db, 'userRatingSummaries', userId)
+  const snapshot = await getDoc(summaryRef)
+  
+  if (snapshot.exists()) {
+    return snapshot.data() as UserRatingSummary
   }
+  
+  return null
 }

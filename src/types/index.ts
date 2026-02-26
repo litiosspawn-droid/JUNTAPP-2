@@ -149,8 +149,118 @@ export interface ChatSettings {
 }
 
 // ============================================================================
-// Content Moderation System Types
+// Rating & Review System Types
 // ============================================================================
+
+/**
+ * Calificación de evento (1-5 estrellas)
+ */
+export interface EventRating {
+  id: string
+  eventId: string
+  userId: string
+  userName: string
+  userPhotoURL?: string
+  rating: number // 1-5
+  comment?: string
+  photos?: string[]
+  createdAt: Date
+  updatedAt?: Date
+  // Dimensiones de calificación
+  ratings: {
+    quality: number // Calidad general
+    organization: number // Organización
+    location: number // Ubicación
+  }
+  // Reacciones a la reseña
+  helpfulCount: number
+  notHelpfulCount: number
+  // Moderación
+  isVerified: boolean // Solo usuarios que asistieron
+  isFlagged: boolean
+  flaggedReason?: string
+}
+
+/**
+ * Resumen de calificaciones de un evento
+ */
+export interface EventRatingSummary {
+  eventId: string
+  averageRating: number
+  totalRatings: number
+  ratingDistribution: {
+    5: number
+    4: number
+    3: number
+    2: number
+    1: number
+  }
+  dimensionAverages: {
+    quality: number
+    organization: number
+    location: number
+  }
+  recommendedPercentage: number
+  totalReviews: number
+  totalPhotos: number
+}
+
+/**
+ * Calificación de usuario (reputación)
+ */
+export interface UserRating {
+  id: string
+  ratedUserId: string
+  raterUserId: string
+  raterUserName: string
+  rating: number // 1-5
+  comment?: string
+  eventId?: string // Evento relacionado
+  createdAt: Date
+  categories: {
+    reliability: number // Confiabilidad
+    friendliness: number // Amabilidad
+    communication: number // Comunicación
+  }
+}
+
+/**
+ * Estadísticas de usuario
+ */
+export interface UserRatingSummary {
+  userId: string
+  averageRating: number
+  totalRatings: number
+  eventsOrganized: number
+  eventsAttended: number
+  reputationScore: number // 0-100
+  badges: string[]
+}
+
+/**
+ * Badge/Logro de usuario
+ */
+export interface UserBadge {
+  id: string
+  userId: string
+  badgeType: BadgeType
+  earnedAt: Date
+  description: string
+  icon: string
+}
+
+export type BadgeType =
+  | 'first_event'
+  | 'organizer_5'
+  | 'organizer_10'
+  | 'organizer_25'
+  | 'super_organizer'
+  | 'reviewer_10'
+  | 'reviewer_50'
+  | 'helpful_reviewer'
+  | 'verified_attendee'
+  | 'early_adopter'
+  | 'community_leader'
 
 /**
  * Tipos de contenido a moderar
