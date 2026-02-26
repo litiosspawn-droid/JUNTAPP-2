@@ -35,7 +35,7 @@ const emptyVariants = cva(
 )
 
 interface EmptyProps
-  extends React.ComponentProps<'div'>,
+  extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof emptyVariants> {}
 
 function Empty({ className, variant = 'default', ...props }: EmptyProps) {
@@ -49,7 +49,7 @@ function Empty({ className, variant = 'default', ...props }: EmptyProps) {
   )
 }
 
-function EmptyHeader({ className, ...props }: React.ComponentProps<'div'>) {
+function EmptyHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       data-slot="empty-header"
@@ -84,7 +84,7 @@ function EmptyMedia({
   variant = 'default',
   children,
   ...props
-}: React.ComponentProps<'div'> & VariantProps<typeof emptyMediaVariants>) {
+}: React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof emptyMediaVariants>) {
   return (
     <div
       data-slot="empty-media"
@@ -139,7 +139,7 @@ function EmptyIllustration({
   )
 }
 
-function EmptyTitle({ className, ...props }: React.ComponentProps<'div'>) {
+function EmptyTitle({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       data-slot="empty-title"
@@ -162,7 +162,7 @@ function EmptyDescription({ className, ...props }: React.ComponentProps<'p'>) {
   )
 }
 
-function EmptyContent({ className, ...props }: React.ComponentProps<'div'>) {
+function EmptyContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       data-slot="empty-content"
@@ -187,7 +187,7 @@ function EmptyAction({ children, className, ...props }: EmptyActionProps) {
   )
 }
 
-function EmptyActions({ className, ...props }: React.ComponentProps<'div'>) {
+function EmptyActions({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       data-slot="empty-actions"

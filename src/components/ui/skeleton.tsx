@@ -17,7 +17,7 @@ const skeletonVariants = cva(
 )
 
 interface SkeletonProps
-  extends React.ComponentProps<'div'>,
+  extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof skeletonVariants> {}
 
 function Skeleton({ className, variant = 'default', ...props }: SkeletonProps) {
