@@ -15,7 +15,7 @@ import {
   limit,
   getDocs,
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { db } from './client'
 import type {
   UserPreferences,
   UserEventHistory,
