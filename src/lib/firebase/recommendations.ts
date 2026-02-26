@@ -21,7 +21,7 @@ import type {
   UserEventHistory,
   EventCategory,
 } from '@/types'
-import { createDefaultPreferences } from './recommendations'
+import { createDefaultPreferences } from '../recommendations'
 
 // ============================================================================
 // Preferencias de Usuario
