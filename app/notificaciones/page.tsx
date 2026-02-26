@@ -1,8 +1,11 @@
 'use client'
 
-import { NotificationTest } from '@/components/notification-test'
 import { Header, Footer } from '@/components/layout'
 import { withAuth } from '@/hoc/withAuth'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Bell, Calendar, Users, MessageCircle, Settings } from 'lucide-react'
+import Link from 'next/link'
 
 function NotificationsPageContent() {
   return (
@@ -12,43 +15,95 @@ function NotificationsPageContent() {
       <main className="flex-1 container mx-auto py-8 px-4">
         <div className="max-w-3xl mx-auto space-y-6">
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold">Notificaciones Push</h1>
+            <Bell className="h-12 w-12 mx-auto text-primary" />
+            <h1 className="text-3xl font-bold">Centro de Notificaciones</h1>
             <p className="text-muted-foreground">
-              Configurá las notificaciones para recibir actualizaciones de tus eventos
+              Gestioná todas tus notificaciones en un solo lugar
             </p>
           </div>
 
-          <NotificationTest />
+          <div className="grid gap-4">
+            <Link href="/notificaciones/configuracion">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardHeader className="flex flex-row items-center gap-4">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Settings className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Configuración</CardTitle>
+                    <CardDescription>
+                      Elegí qué notificaciones recibir y cuándo
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+              </Card>
+            </Link>
 
-          {/* Información adicional */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="p-4 border rounded-lg bg-muted/50">
-              <h3 className="font-semibold mb-2">📅 Recordatorios de Eventos</h3>
-              <p className="text-sm text-muted-foreground">
-                Recibí notificaciones antes de que comiencen tus eventos. Te avisaremos con tiempo para que no te los pierdas.
-              </p>
-            </div>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <Calendar className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Recordatorios de Eventos</CardTitle>
+                    <CardDescription>
+                      No te pierdas ningún evento
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Recibí avisos 24 horas antes de tus eventos confirmados. 
+                  Configurable en la sección de ajustes.
+                </p>
+              </CardContent>
+            </Card>
 
-            <div className="p-4 border rounded-lg bg-muted/50">
-              <h3 className="font-semibold mb-2">💬 Mensajes del Chat</h3>
-              <p className="text-sm text-muted-foreground">
-                Entérate cuando alguien responda en el chat de tus eventos. Mantente conectado con tu comunidad.
-              </p>
-            </div>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-green-100 rounded-lg">
+                    <Users className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Actividad de Eventos</CardTitle>
+                    <CardDescription>
+                      Seguí la actividad de tus eventos
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Notificaciones cuando alguien se registra en tus eventos 
+                  o hay actualizaciones importantes.
+                </p>
+              </CardContent>
+            </Card>
 
-            <div className="p-4 border rounded-lg bg-muted/50">
-              <h3 className="font-semibold mb-2">🎉 Nuevos Eventos</h3>
-              <p className="text-sm text-muted-foreground">
-                Descubrí eventos nuevos cerca de tu ubicación. Explorá lo que pasa en tu zona.
-              </p>
-            </div>
-
-            <div className="p-4 border rounded-lg bg-muted/50">
-              <h3 className="font-semibold mb-2">⚠️ Actualizaciones</h3>
-              <p className="text-sm text-muted-foreground">
-                Recibí alertas cuando haya cambios importantes en eventos a los que confirmaste asistencia.
-              </p>
-            </div>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-purple-100 rounded-lg">
+                    <MessageCircle className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <CardTitle>Mensajes del Chat</CardTitle>
+                    <CardDescription>
+                      Mantente conectado con tu comunidad
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Recibí notificaciones cuando alguien responde en el chat 
+                  de tus eventos.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>
@@ -58,5 +113,4 @@ function NotificationsPageContent() {
   )
 }
 
-// Proteger ruta: requiere autenticación
-export default withAuth(NotificationsPageContent);
+export default withAuth(NotificationsPageContent)

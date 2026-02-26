@@ -7,8 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Bell, Mail, Smartphone, Clock, Calendar } from 'lucide-react'
+import { Bell, Mail, Clock, Calendar } from 'lucide-react'
 import { useUnifiedToast } from '@/hooks/use-unified-toast'
 import { db } from '@/lib/firebase/client'
 import { doc, getDoc, updateDoc } from 'firebase/firestore'
@@ -21,8 +20,8 @@ function NotificationSettingsPageContent() {
     emailNotifications: true,
     pushNotifications: true,
     eventReminders: true,
-    reminderTime: '24h', // '1h', '24h', '1week'
-    weeklySummary: true,
+    reminderTime: '24h',
+    weeklySummary: false,
     newAttendeeAlerts: true,
     eventUpdates: true,
   })
@@ -40,18 +39,18 @@ function NotificationSettingsPageContent() {
             pushNotifications: data.pushNotifications ?? true,
             eventReminders: data.eventReminders ?? true,
             reminderTime: data.reminderTime ?? '24h',
-            weeklySummary: data.weeklySummary ?? true,
+            weeklySummary: data.weeklySummary ?? false,
             newAttendeeAlerts: data.newAttendeeAlerts ?? true,
             eventUpdates: data.eventUpdates ?? true,
           })
         }
       } catch (error) {
-        console.error('Error loading settings:', error)
+        toast.error('Error al cargar configuración')
       }
     }
 
     loadSettings()
-  }, [user])
+  }, [user, toast])
 
   const handleSave = async () => {
     if (!user) return
@@ -63,13 +62,9 @@ function NotificationSettingsPageContent() {
         updatedAt: new Date(),
       })
 
-      toast.success('Configuración guardada', {
-        description: 'Tus preferencias de notificación fueron actualizadas',
-      })
+      toast.success('Configuración guardada')
     } catch (error) {
-      toast.error('Error al guardar', {
-        description: 'No se pudo actualizar la configuración',
-      })
+      toast.error('Error al guardar')
     } finally {
       setLoading(false)
     }
@@ -77,71 +72,59 @@ function NotificationSettingsPageContent() {
 
   const handleRequestPushPermission = async () => {
     if (!('Notification' in window)) {
-      toast.error('No soportado', {
-        description: 'Tu navegador no soporta notificaciones push',
-      })
+      toast.error('Tu navegador no soporta notificaciones push')
       return
     }
 
     const permission = await Notification.requestPermission()
-    
+
     if (permission === 'granted') {
-      toast.success('Notificaciones activadas', {
-        description: 'Ahora recibirás notificaciones push',
-      })
-      
-      // Guardar token para Firebase Cloud Messaging
-      // Esto requiere configurar firebase-messaging-sw.js
+      toast.success('Notificaciones activadas')
+      setSettings({ ...settings, pushNotifications: true })
     }
   }
 
   return (
     <div className="min-h-screen bg-muted/50">
-      <div className="container mx-auto py-8 px-4 max-w-3xl">
+      <div className="container mx-auto py-8 px-4 max-w-2xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Configuración de Notificaciones</h1>
+          <h1 className="text-3xl font-bold mb-2">Notificaciones</h1>
           <p className="text-muted-foreground">
-            Gestioná cómo y cuándo querés recibir notificaciones
+            Gestioná cómo y cuándo recibir notificaciones
           </p>
         </div>
 
         <div className="space-y-6">
-          {/* Notificaciones Push */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Smartphone className="h-5 w-5 text-primary" />
+                <Bell className="h-5 w-5 text-primary" />
                 <CardTitle>Notificaciones Push</CardTitle>
               </div>
               <CardDescription>
-                Recibí notificaciones en tu dispositivo incluso cuando no estás en la app
+                Recibí notificaciones en tu dispositivo
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button
                 onClick={handleRequestPushPermission}
-                variant="outline"
+                variant={settings.pushNotifications ? 'default' : 'outline'}
                 className="w-full gap-2"
               >
                 <Bell className="h-4 w-4" />
-                Activar Notificaciones Push
+                {settings.pushNotifications ? 'Activadas' : 'Activar'}
               </Button>
             </CardContent>
           </Card>
 
-          {/* Preferencias Generales */}
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-2">
-                <Bell className="h-5 w-5 text-primary" />
-                <CardTitle>Preferencias</CardTitle>
-              </div>
+              <CardTitle>Preferencias</CardTitle>
               <CardDescription>
-                Elegí qué tipo de notificaciones querés recibir
+                Elegí qué notificaciones recibir
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Email Notifications */}
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label className="flex items-center gap-2">
@@ -149,7 +132,7 @@ function NotificationSettingsPageContent() {
                     Notificaciones por Email
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Recibí recordatorios y actualizaciones por email
+                    Recordatorios y actualizaciones por email
                   </p>
                 </div>
                 <Switch
@@ -160,7 +143,6 @@ function NotificationSettingsPageContent() {
                 />
               </div>
 
-              {/* Event Reminders */}
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label className="flex items-center gap-2">
@@ -168,7 +150,7 @@ function NotificationSettingsPageContent() {
                     Recordatorios de Eventos
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Recibí un recordatorio antes de tus eventos
+                    Avisos antes de tus eventos
                   </p>
                 </div>
                 <Switch
@@ -179,29 +161,24 @@ function NotificationSettingsPageContent() {
                 />
               </div>
 
-              {/* Reminder Time */}
               {settings.eventReminders && (
                 <div className="space-y-2 pl-6">
-                  <Label className="text-sm">Cuándo enviar recordatorio</Label>
-                  <Select
-                    value={settings.reminderTime}
-                    onValueChange={(value) =>
-                      setSettings({ ...settings, reminderTime: value })
-                    }
-                  >
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1h">1 hora antes</SelectItem>
-                      <SelectItem value="24h">24 horas antes</SelectItem>
-                      <SelectItem value="1week">1 semana antes</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-sm">Cuándo enviar</Label>
+                  <div className="flex gap-2">
+                    {['1h', '24h', '1week'].map((time) => (
+                      <Button
+                        key={time}
+                        variant={settings.reminderTime === time ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setSettings({ ...settings, reminderTime: time })}
+                      >
+                        {time === '1h' ? '1 hora' : time === '24h' ? '24 horas' : '1 semana'}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Weekly Summary */}
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label className="flex items-center gap-2">
@@ -209,7 +186,7 @@ function NotificationSettingsPageContent() {
                     Resumen Semanal
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Recibí un resumen de eventos cada lunes
+                    Eventos cada lunes
                   </p>
                 </div>
                 <Switch
@@ -220,12 +197,11 @@ function NotificationSettingsPageContent() {
                 />
               </div>
 
-              {/* New Attendee Alerts */}
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Alertas de Nuevos Asistentes</Label>
+                  <Label>Nuevos Asistentes</Label>
                   <p className="text-sm text-muted-foreground">
-                    Notificaciones cuando alguien se registra en tus eventos
+                    Cuando alguien se registra en tus eventos
                   </p>
                 </div>
                 <Switch
@@ -236,12 +212,11 @@ function NotificationSettingsPageContent() {
                 />
               </div>
 
-              {/* Event Updates */}
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Actualizaciones de Eventos</Label>
+                  <Label>Actualizaciones</Label>
                   <p className="text-sm text-muted-foreground">
-                    Cambios de fecha, cancelaciones, etc.
+                    Cambios en eventos
                   </p>
                 </div>
                 <Switch
@@ -254,7 +229,6 @@ function NotificationSettingsPageContent() {
             </CardContent>
           </Card>
 
-          {/* Save Button */}
           <Button
             onClick={handleSave}
             disabled={loading}
@@ -269,4 +243,4 @@ function NotificationSettingsPageContent() {
   )
 }
 
-export default withAuth(NotificationSettingsPageContent);
+export default withAuth(NotificationSettingsPageContent)
