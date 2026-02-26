@@ -143,6 +143,26 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // User Preferences collection (para sistema de recomendaciones)
+    match /userPreferences/{userId} {
+      // Solo el dueño puede leer y escribir sus preferencias
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+      allow create: if isAuthenticated() &&
+                    isOwner(userId) &&
+                    request.resource.data.keys().hasAll(['userId', 'favoriteCategories', 'lastUpdated']);
+    }
+
+    // User Event History collection (para sistema de recomendaciones)
+    match /userEventHistory/{userId} {
+      // Solo el dueño puede leer y escribir su historial
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+      allow create: if isAuthenticated() &&
+                    isOwner(userId) &&
+                    request.resource.data.keys().hasAll(['userId', 'attendedEvents', 'likedEvents', 'savedEvents']);
+    }
+
     // Default deny rule
     match /{document=**} {
       allow read, write: if false;

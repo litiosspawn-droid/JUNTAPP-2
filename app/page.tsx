@@ -14,12 +14,14 @@ import { CATEGORIES, CATEGORY_COLORS, type Category } from "@/lib/firebase/event
 import { useEvents } from '@/hooks/use-events'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGeolocation } from '@/hooks/use-geolocation'
+import { useRecommendations } from '@/hooks/use-recommendations'
 import { usePullToRefresh, PullToRefreshContainer } from '@/components/ui/pull-to-refresh'
 import { useUnifiedToast } from '@/hooks/use-unified-toast'
 import { AdvancedFilters } from '@/components/advanced-filters'
 import { useAdvancedSearch } from '@/hooks/use-advanced-search'
 import { FadeIn, SlideIn, Stagger } from '@/components/ui/animations'
 import { OnboardingModal } from '@/components/onboarding-modal'
+import { RecommendationsSection } from '@/components/recommendations-section'
 import { Sparkles, Plus, MapPin, TrendingUp, Users as UsersIcon, Calendar, Star } from 'lucide-react'
 import { ErrorBoundary } from '@/components/error-boundary'
 
@@ -60,6 +62,17 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("")
   const { events, loading: eventsLoading, error, refetch } = useEvents()
   const { position: userLocation, loading: locationLoading, error: locationError, requestLocation } = useGeolocation()
+  
+  // Sistema de recomendaciones
+  const {
+    recommendations,
+    loading: recommendationsLoading,
+    hasPreferences,
+  } = useRecommendations({
+    limit: 8,
+    enabled: !!user,
+    includeTrending: true,
+  })
 
   // Estado para controlar si hemos intentado obtener ubicación
   const [hasRequestedLocation, setHasRequestedLocation] = useState(false)
@@ -466,6 +479,13 @@ export default function HomePage() {
             </div>
           </section>
         )}
+
+        {/* Sección de Recomendaciones */}
+        <RecommendationsSection
+          recommendations={recommendations}
+          loading={recommendationsLoading}
+          onViewAll={() => router.push('/eventos')}
+        />
 
         {/* Ver todos los eventos button */}
         <section className="py-12">
