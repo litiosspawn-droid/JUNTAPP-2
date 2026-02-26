@@ -16,21 +16,9 @@ export const metadata: Metadata = {
   description: 'Encuentra y crea eventos locales cerca tuyo. Conecta con tu comunidad.',
   generator: 'v0.app',
   icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
+    icon: '/icon.svg',
     apple: '/apple-icon.png',
+    shortcut: '/icon.svg',
   },
 }
 
@@ -60,12 +48,9 @@ export default function RootLayout({
         <meta name="theme-color" content="#c2410c" />
 
         <link rel="apple-touch-icon" href="/apple-icon.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/icon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/icon-16x16.png" />
+        <link rel="icon" type="image/svg+xml" href="/icon.svg" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#c2410c" />
-        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="mask-icon" href="/icon.svg" color="#c2410c" />
 
         <script
           src="https://widget.cloudinary.com/v2.0/global/all.js"
