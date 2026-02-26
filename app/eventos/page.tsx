@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import { Header, Footer } from "@/components/layout"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,6 @@ import { useEvents } from '@/hooks/use-events'
 import { useAuth } from '@/contexts/AuthContext'
 import { usePullToRefresh, PullToRefreshContainer } from '@/components/ui/pull-to-refresh'
 import { useUnifiedToast } from '@/hooks/use-unified-toast'
-import { VirtualGrid } from '@/components/ui/virtual-grid'
 import { AdvancedFilters } from '@/components/advanced-filters'
 import { useAdvancedSearch } from '@/hooks/use-advanced-search'
 import { useGeolocation } from '@/hooks/use-geolocation'
@@ -175,22 +174,15 @@ export default function EventosPage() {
               threshold={100}
             >
               <div className="w-full max-w-full overflow-x-hidden">
-                <VirtualGrid
-                  items={filteredEvents}
-                  itemHeight={480}
-                  columns={isMobile ? 1 : window.innerWidth >= 1280 ? 4 : window.innerWidth >= 768 ? 2 : 3}
-                  gap={24}
-                  enabled={filteredEvents.length > 20}
-                  renderItem={(event) => (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {filteredEvents.map((event) => (
                     <EventCard
                       key={event.id}
                       event={event}
                       onDelete={refetch}
                     />
-                  )}
-                  itemKey={(event) => event.id || 'unknown'}
-                  className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                />
+                  ))}
+                </div>
               </div>
             </PullToRefreshContainer>
           ) : (
