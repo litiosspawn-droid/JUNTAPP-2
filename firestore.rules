@@ -183,6 +183,41 @@ service cloud.firestore {
                     request.resource.data.keys().hasAll(['userId', 'attendedEvents', 'likedEvents', 'savedEvents']);
     }
 
+    // Event Ratings collection (para sistema de calificaciones)
+    match /events/{eventId}/ratings/{ratingId} {
+      allow read: if true; // Público para mostrar calificaciones
+      allow create: if isAuthenticated() &&
+                    request.resource.data.userId == request.auth.uid &&
+                    request.resource.data.keys().hasAll(['eventId', 'userId', 'rating', 'ratings']);
+      allow update: if isAuthenticated() &&
+                    (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() &&
+                    (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Event Rating Summaries (lectura pública)
+    match /eventRatingSummaries/{eventId} {
+      allow read: if true;
+      allow write: if false; // Solo se actualiza via Cloud Functions
+    }
+
+    // User Ratings collection (para reputación de usuarios)
+    match /users/{userId}/ratings/{ratingId} {
+      allow read: if true; // Público para mostrar reputación
+      allow create: if isAuthenticated() &&
+                    request.resource.data.raterUserId == request.auth.uid &&
+                    request.resource.data.keys().hasAll(['ratedUserId', 'raterUserId', 'rating']);
+      allow update: if isAuthenticated() &&
+                    (resource.data.raterUserId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // User Rating Summaries (lectura pública)
+    match /userRatingSummaries/{userId} {
+      allow read: if true;
+      allow write: if false; // Solo se actualiza via Cloud Functions
+    }
+
     // Default deny rule
     match /{document=**} {
       allow read, write: if false;
