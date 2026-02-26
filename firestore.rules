@@ -80,24 +80,44 @@ service cloud.firestore {
       }
     }
 
-    // Chats collection
+    // Chats collection (Enhanced Chat System)
     match /chats/{chatId} {
-      allow read, write: if isNotBanned();
+      allow read: if isNotBanned();
+      allow create: if isAuthenticated() && isNotBanned();
 
-      // Messages subcollection
+      // Messages subcollection con soporte mejorado
       match /messages/{messageId} {
         allow read: if isNotBanned();
+        
         allow create: if isAuthenticated() &&
                      isNotBanned() &&
                      isOwner(request.resource.data.userId) &&
-                     request.resource.data.keys().hasAll(['text', 'type', 'timestamp', 'userId', 'eventId']) &&
-                     request.resource.data.type in ['TEXT', 'IMAGE'] &&
+                     request.resource.data.keys().hasAll(['type', 'timestamp', 'userId', 'eventId']) &&
+                     request.resource.data.type in ['TEXT', 'IMAGE', 'LOCATION', 'EVENT_UPDATE', 'REACTION'] &&
                      // Verificar que el evento exista
                      exists(/databases/$(database)/documents/events/$(request.resource.data.eventId));
+        
+        // Actualizar: dueño del mensaje o admin (para reacciones, editar, eliminar)
         allow update: if isAuthenticated() &&
-                     (isOwner(resource.data.userId) || isAdmin());
+                     (
+                       // Dueño puede editar su mensaje o agregar reacciones
+                       (isOwner(resource.data.userId) &&
+                        request.resource.data.userId == resource.data.userId) ||
+                       // Admin puede todo
+                       isAdmin()
+                     );
+        
+        // Eliminar: solo admin o dueño (soft delete)
         allow delete: if isAuthenticated() &&
                      (isOwner(resource.data.userId) || isAdmin());
+      }
+
+      // Participantes subcollection
+      match /participants/{userId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isOwner(userId);
+        allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
+        allow delete: if isAdmin();
       }
     }
 
