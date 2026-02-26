@@ -90,14 +90,14 @@ export function usePullToRefresh({
 
     const container = containerRef.current || document
 
-    container.addEventListener('touchstart', handleTouchStart, { passive: true })
-    container.addEventListener('touchmove', handleTouchMove, { passive: true })
-    container.addEventListener('touchend', handleTouchEnd, { passive: true })
+    container.addEventListener('touchstart', handleTouchStart as EventListener, { passive: true })
+    container.addEventListener('touchmove', handleTouchMove as EventListener, { passive: true })
+    container.addEventListener('touchend', handleTouchEnd as EventListener, { passive: true })
 
     return () => {
-      container.removeEventListener('touchstart', handleTouchStart)
-      container.removeEventListener('touchmove', handleTouchMove)
-      container.removeEventListener('touchend', handleTouchEnd)
+      container.removeEventListener('touchstart', handleTouchStart as EventListener)
+      container.removeEventListener('touchmove', handleTouchMove as EventListener)
+      container.removeEventListener('touchend', handleTouchEnd as EventListener)
     }
   }, [enabled, handleTouchStart, handleTouchMove, handleTouchEnd])
 
@@ -145,6 +145,7 @@ export function PullToRefreshContainer({
   const {
     isRefreshing,
     pullDistance,
+    hasTriggered,
     containerRef,
     handleTouchStart,
     handleTouchMove,
@@ -155,9 +156,9 @@ export function PullToRefreshContainer({
     <div
       ref={containerRef}
       className={className}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      onTouchStart={handleTouchStart as unknown as React.TouchEventHandler<HTMLDivElement>}
+      onTouchMove={handleTouchMove as unknown as React.TouchEventHandler<HTMLDivElement>}
+      onTouchEnd={handleTouchEnd as unknown as React.TouchEventHandler<HTMLDivElement>}
       style={{
         transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : undefined,
         transition: pullDistance > 0 && !isRefreshing ? 'transform 0.2s ease-out' : undefined,

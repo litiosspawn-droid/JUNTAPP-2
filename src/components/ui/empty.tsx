@@ -15,7 +15,8 @@ import {
 } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { Button, type ButtonProps } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
+import type { ButtonHTMLAttributes } from 'react'
 
 const emptyVariants = cva(
   'flex min-w-0 flex-1 flex-col items-center justify-center gap-6 rounded-lg border-dashed p-6 text-center text-balance md:p-12',
@@ -174,7 +175,7 @@ function EmptyContent({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
-interface EmptyActionProps extends ButtonProps {
+interface EmptyActionProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode
 }
 

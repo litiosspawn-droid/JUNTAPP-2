@@ -24,7 +24,7 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { CATEGORIES, SUBCATEGORIES, type Category, CATEGORY_DESCRIPTIONS } from '@/lib/firebase/events'
-import { useToast } from '@/hooks/use-toast'
+import { useUnifiedToast } from '@/hooks/use-unified-toast'
 import dynamic from 'next/dynamic'
 
 const MapView = dynamic(() => import('@/components/map-view').then((mod) => mod.MapView), {
@@ -55,7 +55,7 @@ export default function EditEventPage() {
   const router = useRouter()
   const params = useParams()
   const { user } = useAuth()
-  const toast = useToast()
+  const toast = useUnifiedToast()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')

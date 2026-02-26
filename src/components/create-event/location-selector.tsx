@@ -66,8 +66,8 @@ export function LocationSelector({
     }
   }, [address, onGeocodeAddress, onLocationChange])
 
-  const handleMapClick = useCallback((newLat: number, newLng: number) => {
-    onLocationChange(newLat, newLng)
+  const handleMapClick = useCallback((latlng: { lat: number; lng: number }) => {
+    onLocationChange(latlng.lat, latlng.lng)
   }, [onLocationChange])
 
   return (
@@ -155,7 +155,7 @@ export function LocationSelector({
               center={lat && lng ? [lat, lng] : [-34.6037, -58.3816]}
               zoom={lat && lng ? 16 : 12}
               className="h-full w-full"
-              onLocationSelect={handleMapClick}
+              onMapClick={handleMapClick}
             />
           </div>
           <p className="text-xs text-muted-foreground">

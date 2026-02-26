@@ -327,7 +327,7 @@ export default function HomePage() {
                       zoom={userLocation ? 13 : 11}
                       className="h-full w-full"
                       showUserLocation={true}
-                      userLocation={userLocation}
+                      userLocation={userLocation || undefined}
                     />
                   </ErrorBoundary>
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
@@ -384,7 +384,7 @@ export default function HomePage() {
                   onCategoryChange={setActiveCategoryFilter}
                   onReset={resetFilters}
                   hasActiveFilters={hasActiveFilters}
-                  userLocation={userLocation}
+                  userLocation={userLocation || undefined}
                 />
               </div>
             </FadeIn>

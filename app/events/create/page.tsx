@@ -14,7 +14,7 @@ import Image from 'next/image';
 import ImageUpload from '@/components/events/ImageUpload';
 import { RecurrenceConfigForm, type RecurrenceConfig } from '@/components/create-event/recurrence-config';
 import { CancellationPolicyForm, type CancellationPolicy } from '@/components/create-event/cancellation-policy';
-import { createRecurringEvents } from '@/lib/firebase/events';
+import { createRecurringEvents, type Category } from '@/lib/firebase/events';
 
 function CreateEventPageContent() {
   const { user } = useAuth();
@@ -34,6 +34,7 @@ function CreateEventPageContent() {
   const [formData, setFormData] = useState({
     title: '',
     category: '',
+    description: '',
     date: '',
     time: '',
     address: '',
@@ -71,6 +72,7 @@ function CreateEventPageContent() {
       // 4. Crear evento padre
       const eventToSave = {
         title: formData.title,
+        description: formData.description || '',
         flyerUrl,
         category: formData.category,
         date: formData.date,
@@ -98,7 +100,7 @@ function CreateEventPageContent() {
 
       // 6. Si es recurrente, crear instancias
       if (recurrenceConfig.isRecurring && recurrenceConfig.pattern !== 'none') {
-        const parentEvent = {
+        const parentEvent: any = {
           id: docRef.id,
           ...eventToSave,
         };

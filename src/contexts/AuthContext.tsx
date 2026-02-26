@@ -124,7 +124,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Send verification email
       await sendEmailVerification(result.user, {
-        url: typeof window !== 'undefined' ? window.location.origin : undefined,
+        url: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
       });
 
       // Crear documento de usuario en Firestore
@@ -178,7 +178,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         checkRateLimit(user.uid, 'RESEND_VERIFICATION', RATE_LIMITS.RESEND_VERIFICATION);
         
         await sendEmailVerification(user, {
-          url: typeof window !== 'undefined' ? window.location.origin : undefined,
+          url: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
         });
       }
     } catch (error) {

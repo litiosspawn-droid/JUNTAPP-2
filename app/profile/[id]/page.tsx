@@ -59,14 +59,14 @@ export default function ProfilePage({ params }: { params: Promise<{ id: string }
             uid: resolvedParams.id,
             displayName: 'Usuario',
             email: '',
-            photoURL: null,
+            photoURL: undefined,
             bio: '',
             location: '',
             website: '',
             banned: false,
             role: 'user',
-            createdAt: null,
-            updatedAt: null,
+            createdAt: undefined,
+            updatedAt: undefined,
           });
         } else {
           const userData = userDoc.data() as UserProfile;

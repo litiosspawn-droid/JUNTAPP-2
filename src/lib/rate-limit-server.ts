@@ -4,7 +4,7 @@
  */
 
 import { db } from '@/lib/firebase/admin';
-import { doc, getDoc, setDoc, updateDoc, increment, Timestamp } from 'firebase/firestore';
+import * as admin from 'firebase-admin';
 
 export interface RateLimitConfig {
   windowMs: number; // Ventana de tiempo en milisegundos
@@ -67,19 +67,17 @@ export async function checkRateLimit(
   config: RateLimitConfig
 ): Promise<{ remaining: number; resetAt: Date }> {
   const now = Date.now();
-  
-  // Usar admin SDK para server-side
-  const rateLimitRef = doc(db, 'rateLimits', `${action}_${identifier}`);
+  const rateLimitRef = db.collection('rateLimits').doc(`${action}_${identifier}`);
 
   try {
-    const rateLimitDoc = await getDoc(rateLimitRef);
+    const rateLimitDoc = await rateLimitRef.get();
 
-    if (!rateLimitDoc.exists()) {
+    if (!rateLimitDoc.exists) {
       // Primer request
-      await setDoc(rateLimitRef, {
+      await rateLimitRef.set({
         count: 1,
         windowStart: now,
-        lastUpdated: Timestamp.now(),
+        lastUpdated: new Date(),
       });
 
       return {
@@ -89,16 +87,20 @@ export async function checkRateLimit(
     }
 
     const data = rateLimitDoc.data();
+    if (!data) {
+      throw new Error('Invalid rate limit data');
+    }
+    
     const windowStart = data.windowStart as number;
     const count = data.count as number;
 
     // Verificar si la ventana expiró
     if (now - windowStart >= config.windowMs) {
       // Reiniciar ventana
-      await updateDoc(rateLimitRef, {
+      await rateLimitRef.update({
         count: 1,
         windowStart: now,
-        lastUpdated: Timestamp.now(),
+        lastUpdated: new Date(),
       });
 
       return {
@@ -117,9 +119,9 @@ export async function checkRateLimit(
     }
 
     // Incrementar contador
-    await updateDoc(rateLimitRef, {
-      count: increment(1),
-      lastUpdated: Timestamp.now(),
+    await rateLimitRef.update({
+      count: admin.firestore.FieldValue.increment(1),
+      lastUpdated: new Date(),
     });
 
     return {

@@ -39,14 +39,12 @@ export function NotificationTest() {
       toast({
         title: '¡Permiso concedido!',
         description: 'Las notificaciones push están habilitadas',
-        icon: <CheckCircle className="h-4 w-4 text-green-500" />,
       })
     } else {
       toast({
         title: 'Permiso denegado',
         description: 'No se pudo habilitar las notificaciones',
         variant: 'destructive',
-        icon: <AlertCircle className="h-4 w-4" />,
       })
     }
   }
@@ -87,7 +85,6 @@ export function NotificationTest() {
         toast({
           title: '¡Prueba exitosa!',
           description: 'La notificación fue enviada correctamente',
-          icon: <CheckCircle className="h-4 w-4 text-green-500" />,
         })
       } else {
         throw new Error(result.error || 'Error al enviar notificación')
@@ -97,7 +94,6 @@ export function NotificationTest() {
         title: 'Error en la prueba',
         description: error.message || 'No se pudo enviar la notificación de prueba',
         variant: 'destructive',
-        icon: <AlertCircle className="h-4 w-4" />,
       })
     } finally {
       setTesting(false)

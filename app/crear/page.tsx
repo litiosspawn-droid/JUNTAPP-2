@@ -701,7 +701,6 @@ function CreateEventPageContent() {
                         id="address"
                         value={formData.address}
                         onChange={(e) => handleInputChange('address', e.target.value)}
-                        onBlur={() => handleFieldBlur('address')}
                         placeholder="Ej: Av. Corrientes 3456, Buenos Aires"
                         className={getFieldError('address') ? 'border-destructive' : ''}
                         disabled={isGeocoding}
@@ -745,8 +744,8 @@ function CreateEventPageContent() {
                         zoom={15}
                         className="h-full w-full"
                         onMapClick={(latlng) => {
-                          handleInputChange('lat', latlng.lat)
-                          handleInputChange('lng', latlng.lng)
+                          handleInputChange('lat', latlng.lat.toString())
+                          handleInputChange('lng', latlng.lng.toString())
                         }}
                         selectedLocation={formData.lat && formData.lng ? [formData.lat, formData.lng] : undefined}
                         showUserLocation={false}

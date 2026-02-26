@@ -286,7 +286,7 @@ export default function EventPage() {
           />
           <div className="absolute bottom-0 left-0 right-0 p-6 z-20">
             <div className="container mx-auto max-w-6xl">
-              <Badge className={`${CATEGORY_COLORS[event.category]} mb-3`}>
+              <Badge className={`${CATEGORY_COLORS[event.category as keyof typeof CATEGORY_COLORS] ?? CATEGORY_COLORS["Otros"]} mb-3`}>
                 {event.category}
               </Badge>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white drop-shadow-lg">
@@ -326,7 +326,7 @@ export default function EventPage() {
 
         {!event.flyerUrl && (
           <div className="mb-6">
-            <Badge className={`${CATEGORY_COLORS[event.category]} mb-3`}>
+            <Badge className={`${CATEGORY_COLORS[event.category as keyof typeof CATEGORY_COLORS] ?? CATEGORY_COLORS["Otros"]} mb-3`}>
               {event.category}
             </Badge>
             <h1 className="text-3xl md:text-4xl font-bold">{event.title}</h1>

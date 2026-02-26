@@ -13,7 +13,7 @@ interface ErrorBoundaryState {
 
 interface ErrorBoundaryProps {
   children: React.ReactNode
-  fallback?: React.ComponentType<{ error: Error; resetError: () => void }>
+  fallback?: React.ComponentType<{ error: Error; resetError: () => void }> | React.ReactNode
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -55,8 +55,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
-        const FallbackComponent = this.props.fallback
-        return <FallbackComponent error={this.state.error!} resetError={this.resetError} />
+        // Si fallback es un componente
+        if (typeof this.props.fallback === 'function') {
+          const FallbackComponent = this.props.fallback as React.ComponentType<{ error: Error; resetError: () => void }>
+          return <FallbackComponent error={this.state.error!} resetError={this.resetError} />
+        }
+        // Si fallback es un elemento React
+        return this.props.fallback
       }
 
       return <DefaultErrorFallback error={this.state.error!} resetError={this.resetError} />

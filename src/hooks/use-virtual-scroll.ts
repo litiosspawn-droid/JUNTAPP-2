@@ -14,7 +14,7 @@ interface UseVirtualScrollReturn<T> {
   startIndex: number
   endIndex: number
   totalHeight: number
-  containerRef: React.RefObject<HTMLDivElement>
+  containerRef: React.RefObject<HTMLDivElement | null>
   isLoading: boolean
 }
 

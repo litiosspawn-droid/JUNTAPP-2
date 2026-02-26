@@ -64,7 +64,7 @@ export const confirmAttendance = async (eventId: string, userId: string, userNam
     }
 
     // Crear nuevo registro
-    const attendeeData: Omit<Attendee, 'id'> = {
+    const attendeeData: Omit<Attendee, 'id' | 'joinedAt'> & { joinedAt: any } = {
       eventId,
       userId,
       userName,
@@ -324,7 +324,7 @@ export const joinWaitlist = async (eventId: string, userId: string, userName: st
     }
 
     // Crear nuevo registro en waitlist
-    const attendeeData: Omit<Attendee, 'id'> = {
+    const attendeeData: Omit<Attendee, 'id' | 'joinedAt'> & { joinedAt: any } = {
       eventId,
       userId,
       userName,

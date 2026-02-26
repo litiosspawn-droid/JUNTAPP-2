@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { withAdmin } from '@/hoc/withAuth'
+import { useAuth } from '@/contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Users,
   Calendar,
@@ -22,9 +21,10 @@ import {
   CheckCircle,
   AlertTriangle,
   Settings,
-  BarChart3
+  BarChart3,
+  Loader2
 } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useUnifiedToast } from '@/hooks/use-unified-toast'
 
 interface AdminStats {
   totalUsers: number
@@ -47,42 +47,40 @@ interface AdminUser {
   lastLogin?: Date
 }
 
-function AdminPage() {
-  const { user } = useAuth()
+interface AdminEvent {
+  id: string
+  title: string
+  creator: string
+  status: 'reported' | 'active' | 'removed'
+  reports: number
+  attendees: number
+}
+
+function AdminPageContent() {
+  const { user, loading: authLoading } = useAuth()
   const router = useRouter()
+  const toast = useUnifiedToast()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
-  const [events, setEvents] = useState<any[]>([])
+  const [events, setEvents] = useState<AdminEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [userRole, setUserRole] = useState<'user' | 'admin'>('user')
 
-  // Check if user is admin
   useEffect(() => {
-    const checkAdminAccess = async () => {
-      if (!user) {
-        router.push('/auth/login')
-        return
-      }
-
-      try {
-        // In a real implementation, check user role from Firestore
-        // For now, assume admin access
-        await loadAdminData()
-      } catch (error) {
-        console.error('Admin access check failed:', error)
-        router.push('/')
-      }
+    if (!authLoading && !user) {
+      router.push('/auth/login')
+      return
     }
 
-    checkAdminAccess()
-  }, [user, router])
+    if (!authLoading && user) {
+      loadAdminData()
+    }
+  }, [user, authLoading, router])
 
   const loadAdminData = async () => {
     try {
       setLoading(true)
 
-      // Mock admin stats - in real implementation, fetch from Firestore
       setStats({
         totalUsers: 1247,
         totalEvents: 89,
@@ -92,7 +90,6 @@ function AdminPage() {
         activeEvents: 67
       })
 
-      // Mock users data
       setUsers([
         {
           uid: 'user-1',
@@ -118,7 +115,6 @@ function AdminPage() {
         }
       ])
 
-      // Mock events data
       setEvents([
         {
           id: 'event-1',
@@ -132,6 +128,7 @@ function AdminPage() {
 
     } catch (error) {
       console.error('Error loading admin data:', error)
+      toast.error('Error al cargar datos')
     } finally {
       setLoading(false)
     }
@@ -139,10 +136,6 @@ function AdminPage() {
 
   const handleUserAction = async (userId: string, action: 'ban' | 'unban' | 'promote' | 'demote') => {
     try {
-      // In real implementation, call Firebase functions
-      console.log(`Performing ${action} on user ${userId}`)
-
-      // Update local state
       setUsers(users.map(u =>
         u.uid === userId
           ? {
@@ -153,24 +146,25 @@ function AdminPage() {
           : u
       ))
 
-      alert(`Usuario ${action === 'ban' ? 'baneado' : action === 'unban' ? 'desbaneado' : action === 'promote' ? 'promovido' : 'degradado'} exitosamente`)
+      toast.success('Usuario actualizado', {
+        description: `Usuario ${action === 'ban' ? 'baneado' : action === 'unban' ? 'desbaneado' : action === 'promote' ? 'promovido' : 'degradado'} exitosamente`
+      })
     } catch (error) {
       console.error(`Error ${action}ing user:`, error)
-      alert(`Error al ${action === 'ban' ? 'banear' : action === 'unban' ? 'desbanear' : action === 'promote' ? 'promover' : 'degradar'} usuario`)
+      toast.error('Error al actualizar usuario')
     }
   }
 
   const handleEventAction = async (eventId: string, action: 'approve' | 'reject' | 'delete') => {
     try {
-      console.log(`Performing ${action} on event ${eventId}`)
-
-      // Update local state
       setEvents(events.filter(e => e.id !== eventId))
 
-      alert(`Evento ${action === 'approve' ? 'aprobado' : action === 'reject' ? 'rechazado' : 'eliminado'} exitosamente`)
+      toast.success('Evento actualizado', {
+        description: `Evento ${action === 'approve' ? 'aprobado' : action === 'reject' ? 'rechazado' : 'eliminado'} exitosamente`
+      })
     } catch (error) {
       console.error(`Error ${action}ing event:`, error)
-      alert(`Error al ${action === 'approve' ? 'aprobar' : action === 'reject' ? 'rechazar' : 'eliminar'} evento`)
+      toast.error('Error al actualizar evento')
     }
   }
 
@@ -179,21 +173,23 @@ function AdminPage() {
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-muted rounded w-1/3"></div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-24 bg-muted rounded"></div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <div className="flex min-h-screen items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center justify-center p-8">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground text-center">
+              Cargando...
+            </p>
+          </CardContent>
+        </Card>
       </div>
     )
+  }
+
+  if (!user) {
+    return null
   }
 
   return (
@@ -209,7 +205,6 @@ function AdminPage() {
           </p>
         </div>
 
-        {/* Stats Overview */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <Card>
@@ -270,7 +265,6 @@ function AdminPage() {
           </div>
         )}
 
-        {/* Admin Tabs */}
         <Tabs defaultValue="users" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="users" className="flex items-center gap-2">
@@ -291,7 +285,6 @@ function AdminPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
             <Card>
               <CardHeader>
@@ -390,7 +383,6 @@ function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Events Tab */}
           <TabsContent value="events" className="space-y-6">
             <Card>
               <CardHeader>
@@ -446,7 +438,6 @@ function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Reports Tab */}
           <TabsContent value="reports" className="space-y-6">
             <Card>
               <CardHeader>
@@ -496,7 +487,6 @@ function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
             <Card>
               <CardHeader>
@@ -549,5 +539,4 @@ function AdminPage() {
   )
 }
 
-// Proteger ruta: solo admins
-export default withAdmin(AdminPage);
+export default AdminPageContent

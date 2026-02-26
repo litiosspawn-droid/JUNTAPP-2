@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,7 +24,7 @@ export function EventRatingForm({ eventId, onRatingSubmitted, className }: Event
   const [isLoadingExisting, setIsLoadingExisting] = useState(true)
 
   // Cargar valoración existente del usuario
-  useState(() => {
+  useEffect(() => {
     const loadExistingRating = async () => {
       if (!user) {
         setIsLoadingExisting(false)

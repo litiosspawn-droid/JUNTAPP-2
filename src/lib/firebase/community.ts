@@ -1,12 +1,14 @@
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from './client';
 import type { Event } from './events';
+import type { UserProfile } from './users';
 
 // Re-export types
 export type { Event } from './events';
+export type { UserProfile } from './users';
 
 // Get all users (for community page)
-export async function getAllUsers() {
+export async function getAllUsers(): Promise<UserProfile[]> {
   try {
     console.log('👥 Fetching all users for community...');
 
@@ -21,7 +23,7 @@ export async function getAllUsers() {
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate(),
       lastLogin: doc.data().lastLogin?.toDate(),
-    }));
+    })) as UserProfile[];
 
     console.log(`✅ Found ${users.length} users in community`);
     return users;
@@ -32,7 +34,7 @@ export async function getAllUsers() {
 }
 
 // Get all events (for community page) - using same function as homepage
-export async function getAllEvents() {
+export async function getAllEvents(): Promise<Event[]> {
   try {
     console.log('📅 Fetching all events for community...');
 

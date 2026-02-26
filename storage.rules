@@ -13,12 +13,14 @@ service firebase.storage {
 
     function isAdmin() {
       return isAuthenticated() &&
-             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     function isNotBanned() {
       return isAuthenticated() &&
-             firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.banned == false;
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.banned == false;
     }
 
     // Event flyers - public read, creator write only
@@ -26,9 +28,9 @@ service firebase.storage {
       allow read: if true; // Flyers are public for display
       allow write: if isAuthenticated() &&
                    isNotBanned() &&
-                   request.auth.uid == firestore.get(/databases/(default)/documents/events/$(eventId)).data.creatorId;
+                   request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.creatorId;
       allow delete: if isAuthenticated() &&
-                    (request.auth.uid == firestore.get(/databases/(default)/documents/events/$(eventId)).data.creatorId ||
+                    (request.auth.uid == get(/databases/$(database)/documents/events/$(eventId)).data.creatorId ||
                      isAdmin());
     }
 
@@ -44,8 +46,9 @@ service firebase.storage {
       allow read: if isAuthenticated() && isNotBanned();
       allow write: if isAuthenticated() &&
                    isNotBanned() &&
-                   (request.auth.uid in firestore.get(/databases/(default)/documents/events/$(chatId)).data.attendees ||
-                    request.auth.uid == firestore.get(/databases/(default)/documents/events/$(chatId)).data.creatorId);
+                   exists(/databases/$(database)/documents/events/$(chatId)) &&
+                   (request.auth.uid in get(/databases/$(database)/documents/events/$(chatId)).data.attendees ||
+                    request.auth.uid == get(/databases/$(database)/documents/events/$(chatId)).data.creatorId);
     }
 
     // Default deny rule

@@ -21,44 +21,65 @@ service cloud.firestore {
     function isNotBanned() {
       return isAuthenticated() &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.banned == false;
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.banned != true;
     }
-    
+
+    function getEventData(eventId) {
+      return get(/databases/$(database)/documents/events/$(eventId)).data;
+    }
+
     // Users collection
     match /users/{userId} {
-      allow read: if true; // Permitir lectura pública de perfiles de usuario
+      // Solo usuarios autenticados pueden leer perfiles (no público)
+      allow read: if isAuthenticated();
       allow write: if isOwner(userId) || isAdmin();
       allow create: if isAuthenticated() &&
                     isOwner(userId) &&
                     request.resource.data.keys().hasAll(['email', 'username', 'role']) &&
-                    request.resource.data.role in ['user', 'admin'];
+                    request.resource.data.role in ['user', 'admin'] &&
+                    // Validar que el email coincida con el auth
+                    request.resource.data.email == request.auth.token.email;
     }
-    
+
     // Events collection
     match /events/{eventId} {
       allow read: if true; // Permitir lectura pública para que aparezcan en homepage
-      allow create: if isAuthenticated() && isNotBanned(); // Permitir creación a todos los usuarios registrados y no baneados
       
-      // Permitir update: al creador permite todo, a cualquier usuario autenticado permite solo actualizar el contador attendees
-      allow update: if request.auth != null && 
-                    (request.auth.uid == resource.data.createdBy || 
-                     request.auth.uid == resource.data.creatorId ||
-                     // Permitir actualización del campo attendees (increment/decrement)
-                     request.resource.data.attendees is number);
-                      
-      allow delete: if request.auth != null && 
-                    (request.auth.uid == resource.data.createdBy || 
-                     request.auth.uid == resource.data.creatorId); // Solo el creador puede eliminar
+      allow create: if isAuthenticated() && 
+                    isNotBanned() &&
+                    request.resource.data.keys().hasAll(['title', 'description', 'category', 'date', 'time', 'address', 'lat', 'lng', 'creatorId']) &&
+                    request.resource.data.creatorId == request.auth.uid;
+
+      // Solo el creador puede actualizar el evento completo
+      // Cualquier usuario autenticado puede solo incrementar/decrementar attendees
+      allow update: if isAuthenticated() &&
+                    (
+                      // El creador puede actualizar todo
+                      (request.auth.uid == resource.data.creatorId &&
+                       request.resource.data.creatorId == resource.data.creatorId) ||
+                      // Otros usuarios solo pueden actualizar attendees (con límites)
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attendees']) &&
+                       request.resource.data.attendees is number &&
+                       (request.resource.data.attendees == resource.data.attendees + 1 ||
+                        request.resource.data.attendees == resource.data.attendees - 1))
+                    );
+
+      allow delete: if isAdmin() || 
+                    (request.auth != null &&
+                     request.auth.uid == resource.data.creatorId);
 
       // Messages subcollection under events
       match /messages/{messageId} {
         allow read: if isAuthenticated() && isNotBanned();
-        allow create: if isAuthenticated() && isNotBanned() && isOwner(request.resource.data.userId);
+        allow create: if isAuthenticated() && 
+                     isNotBanned() && 
+                     isOwner(request.resource.data.userId) &&
+                     request.resource.data.keys().hasAll(['text', 'timestamp', 'userId']);
         allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
         allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
       }
     }
-    
+
     // Chats collection
     match /chats/{chatId} {
       allow read, write: if isNotBanned();
@@ -76,25 +97,26 @@ service cloud.firestore {
         allow update: if isAuthenticated() &&
                      (isOwner(resource.data.userId) || isAdmin());
         allow delete: if isAuthenticated() &&
-                     (isOwner(resource.data.userId) || isAdmin() ||
-                      request.auth.uid == resource.data.creatorId);
+                     (isOwner(resource.data.userId) || isAdmin());
       }
     }
-    
+
     // Reports collection
     match /reports/{reportId} {
       allow read: if isAdmin();
-      allow create: if isAuthenticated() && 
+      allow create: if isAuthenticated() &&
                     isNotBanned() &&
                     isOwner(request.resource.data.reporterId) &&
                     request.resource.data.keys().hasAll(['targetType', 'targetId', 'reporterId', 'reason', 'status']) &&
-                    request.resource.data.targetType in ['USER', 'EVENT', 'MESSAGE'];
+                    request.resource.data.targetType in ['USER', 'EVENT', 'MESSAGE'] &&
+                    request.resource.data.status in ['pending', 'resolved', 'rejected'];
       allow update: if isAdmin();
     }
-    
+
     // FCM Tokens collection
     match /fcmTokens/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) &&
                     request.resource.data.keys().hasAll(['token', 'platform']);
     }
@@ -106,11 +128,19 @@ service cloud.firestore {
                     isNotBanned() &&
                     request.resource.data.userId == request.auth.uid &&
                     request.resource.data.eventId != null &&
-                    request.resource.data.status in ['confirmed', 'pending', 'cancelled'];
+                    request.resource.data.status in ['confirmed', 'pending', 'cancelled'] &&
+                    // Verificar que el evento exista
+                    exists(/databases/$(database)/documents/events/$(request.resource.data.eventId));
       allow update: if isAuthenticated() &&
                     (resource.data.userId == request.auth.uid || isAdmin());
       allow delete: if isAuthenticated() &&
                     (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Admin collection (opcional para configuraciones de admin)
+    match /admin/{document} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
     }
 
     // Default deny rule

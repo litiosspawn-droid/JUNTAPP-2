@@ -2,11 +2,10 @@
 
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Card, CardContent } from '@/components/ui/card'
 
 /**
  * Lazy load components con loading skeleton
- * 
+ *
  * @example
  * const LazyMap = lazyWithSkeleton(() => import('@/components/map-view'))
  */
@@ -17,18 +16,16 @@ export function lazyWithSkeleton<T extends React.ComponentType<any>>(
     loadingHeight?: string
   }
 ) {
-  return dynamic(
+  return dynamic<{ default: T }>(
     {
       loader: importFunc,
       loading: () => (
-        <Card className="w-full h-full overflow-hidden">
-          <CardContent className="p-0">
-            <Skeleton 
-              className="w-full h-full" 
-              style={{ height: options?.loadingHeight || '400px' }} 
-            />
-          </CardContent>
-        </Card>
+        <div className="w-full h-full overflow-hidden border rounded-xl bg-card p-6">
+          <Skeleton
+            className="w-full h-full"
+            style={{ height: options?.loadingHeight || '400px' }}
+          />
+        </div>
       ),
       ssr: options?.ssr ?? false,
     }

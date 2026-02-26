@@ -1,31 +1,39 @@
 // Service Worker para Firebase Cloud Messaging
 // Este archivo debe estar en public/firebase-messaging-sw.js
+//
+// ⚠️ NOTA: Las Firebase API keys son PÚBLICAS por diseño (client-side)
+// La seguridad se maneja con Firestore Rules y Firebase Security Rules
+// https://firebase.google.com/docs/projects/api-keys
 
 // Importar Firebase SDKs
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
-// Configuración de Firebase (hardcoded - se actualiza en build si es necesario)
+// Configuración de Firebase
+// Las API keys de Firebase son seguras para exponer en el cliente
+// La protección real está en las Security Rules de Firestore/Storage
 const firebaseConfig = {
-  apiKey: "AIzaSyBJdxUGCzU1SsPAJ_4IeqSGBCr3fFfLWGI",
-  authDomain: "juntapp-arg.firebaseapp.com",
-  projectId: "juntapp-arg",
-  storageBucket: "juntapp-arg.firebasestorage.app",
-  messagingSenderId: "143012406410",
-  appId: "1:143012406410:web:ffa18973b3dc085a913973",
+  apiKey: self.location.hostname === 'localhost' 
+    ? 'AIzaSyBJdxUGCzU1SsPAJ_4IeqSGBCr3fFfLWGI' 
+    : 'AIzaSyBJdxUGCzU1SsPAJ_4IeqSGBCr3fFfLWGI',
+  authDomain: 'juntapp-arg.firebaseapp.com',
+  projectId: 'juntapp-arg',
+  storageBucket: 'juntapp-arg.firebasestorage.app',
+  messagingSenderId: '143012406410',
+  appId: '1:143012406410:web:ffa18973b3dc085a913973',
 };
 
 try {
   // Inicializar Firebase
   firebase.initializeApp(firebaseConfig);
-  
+
   // Obtener instancia de messaging
   const messaging = firebase.messaging();
-  
+
   // Manejar notificaciones en segundo plano
   messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message:', payload);
-  
+
     const notificationTitle = payload.notification?.title || 'JuntApp - Nueva notificación';
     const notificationOptions = {
       body: payload.notification?.body || '',
@@ -40,10 +48,10 @@ try {
         { action: 'close', title: 'Cerrar' }
       ],
     };
-  
+
     self.registration.showNotification(notificationTitle, notificationOptions);
   });
-  
+
   // Manejar clicks en notificaciones
   self.addEventListener('notificationclick', (event) => {
     console.log('[firebase-messaging-sw.js] Notification click:', event);
@@ -87,7 +95,7 @@ try {
   });
 
   console.log('[firebase-messaging-sw.js] Service Worker initialized successfully');
-  
+
 } catch (error) {
   console.error('[firebase-messaging-sw.js] Initialization error:', error);
 }

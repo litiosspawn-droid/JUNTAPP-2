@@ -130,7 +130,7 @@ export default function EventosPage() {
               onCategoryChange={setActiveCategoryFilter}
               onReset={resetFilters}
               hasActiveFilters={hasActiveFilters}
-              userLocation={userLocation}
+              userLocation={userLocation || undefined}
             />
           </div>
 
@@ -188,7 +188,7 @@ export default function EventosPage() {
                       onDelete={refetch}
                     />
                   )}
-                  itemKey={(event) => event.id}
+                  itemKey={(event) => event.id || 'unknown'}
                   className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                 />
               </div>

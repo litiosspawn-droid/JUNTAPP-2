@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
+  },
+  // Disable Turbopack for global-error.tsx due to Next.js 16 bug
+  experimental: {
+    webpackBuildWorker: true,
   },
   images: {
     unoptimized: false,
@@ -12,11 +16,23 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'api.cloudinary.com',
+      },
+      {
+        protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
       },
       {
         protocol: 'https',
         hostname: 'firebasestorage.googleapis.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
       },
     ],
     formats: ['image/avif', 'image/webp'],

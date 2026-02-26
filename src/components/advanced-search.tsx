@@ -61,7 +61,7 @@ export function AdvancedSearch({
       return
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     const recognition = new SpeechRecognition()
 
     recognition.lang = 'es-ES' // Spanish
@@ -72,7 +72,7 @@ export function AdvancedSearch({
       setIsListening(true)
     }
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript
       onFiltersChange({
         ...filters,
@@ -81,7 +81,7 @@ export function AdvancedSearch({
       setIsListening(false)
     }
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: any) => {
       console.error('Voice search error:', event.error)
       setIsListening(false)
     }
@@ -134,8 +134,8 @@ export function AdvancedSearch({
       updateLocationFilter('lng', userLocation[1])
       updateLocationFilter('useCurrentLocation', true)
     } else {
-      const granted = await requestLocation()
-      if (granted && userLocation) {
+      await requestLocation()
+      if (userLocation) {
         updateLocationFilter('lat', userLocation[0])
         updateLocationFilter('lng', userLocation[1])
         updateLocationFilter('useCurrentLocation', true)

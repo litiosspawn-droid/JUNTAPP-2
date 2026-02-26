@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as admin from '@/lib/firebase/admin';
-import { db, messaging } from '@/lib/firebase/admin';
+import admin, { messaging } from '@/lib/firebase/admin';
+import { db } from '@/lib/firebase/admin';
 import { checkRateLimit, RATE_LIMITS, RateLimitError } from '@/lib/rate-limit-server';
 
 export async function POST(request: NextRequest) {
@@ -104,6 +104,12 @@ async function checkNotificationPreferences(userId: string, type: string): Promi
 // Enviar notificación via Firebase Cloud Messaging usando Admin SDK
 async function sendFCMNotification(token: string, payload: any): Promise<boolean> {
   try {
+    // Verificar si messaging está disponible
+    if (!messaging) {
+      console.warn('FCM messaging not available');
+      return false;
+    }
+
     const message: admin.messaging.Message = {
       token,
       notification: {

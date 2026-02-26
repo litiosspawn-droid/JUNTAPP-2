@@ -1,7 +1,6 @@
 {
   "projects": {
-    "Juntapp": "juntapp-arg",
-    "juntaapp": "juntapp-arg"
+    "juntapp": "juntapp-arg"
   },
   "targets": {},
   "etags": {}
