@@ -48,3 +48,7 @@ coverage/
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Documentation (optional - ignore all .md files)
+*.md
+!README.md

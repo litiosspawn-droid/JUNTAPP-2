@@ -44,6 +44,111 @@ export interface ApiResponse<T> {
 }
 
 // ============================================================================
+// Enhanced Chat System Types
+// ============================================================================
+
+/**
+ * Tipos de mensaje en el chat
+ */
+export type MessageType = 'TEXT' | 'IMAGE' | 'LOCATION' | 'EVENT_UPDATE' | 'REACTION'
+
+/**
+ * Reacciones disponibles para mensajes
+ */
+export type ReactionEmoji = '👍' | '❤️' | '😂' | '😮' | '😢' | '😡' | '🎉' | '🔥'
+
+/**
+ * Ubicación compartida en el chat
+ */
+export interface SharedLocation {
+  lat: number
+  lng: number
+  address?: string
+  timestamp: Date
+}
+
+/**
+ * Reacción a un mensaje
+ */
+export interface MessageReaction {
+  emoji: ReactionEmoji
+  userId: string
+  userName: string
+  timestamp: Date
+}
+
+/**
+ * Mensaje mejorado con soporte para reacciones y ubicación
+ */
+export interface EnhancedChatMessage {
+  id: string
+  eventId: string
+  userId: string
+  userName: string
+  userPhotoURL?: string
+  type: MessageType
+  content: string
+  timestamp: Date
+  updatedAt?: Date
+  // Características mejoradas
+  reactions: MessageReaction[]
+  location?: SharedLocation
+  imageUrl?: string
+  // Estado del mensaje
+  isEdited: boolean
+  isDeleted: boolean
+  // Metadata
+  replyTo?: string // ID del mensaje al que responde
+  mentions?: string[] // IDs de usuarios mencionados
+}
+
+/**
+ * Estado de lectura del chat
+ */
+export interface ChatReadStatus {
+  userId: string
+  lastReadMessageId: string
+  lastReadAt: Date
+}
+
+/**
+ * Sala de chat de un evento
+ */
+export interface ChatRoom {
+  id: string
+  eventId: string
+  createdAt: Date
+  updatedAt: Date
+  messageCount: number
+  participantCount: number
+  lastMessage?: EnhancedChatMessage
+}
+
+/**
+ * Participante del chat
+ */
+export interface ChatParticipant {
+  userId: string
+  userName: string
+  photoURL?: string
+  joinedAt: Date
+  lastSeenAt?: Date
+  isAdmin: boolean
+  isBanned: boolean
+}
+
+/**
+ * Configuración del chat
+ */
+export interface ChatSettings {
+  allowImages: boolean
+  allowLocation: boolean
+  allowReactions: boolean
+  maxMessagesPerMinute: number
+  bannedWords: string[]
+}
+
+// ============================================================================
 // Recommendation System Types
 // ============================================================================
 
