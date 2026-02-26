@@ -9,17 +9,13 @@ import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '../ui/scroll-area'
 import { Lock as LockIcon, MessageCircle as MessageCircleIcon, Flag as FlagIcon, SmilePlus as SmilePlusIcon, ChevronUp, MapPin } from 'lucide-react'
+import { useChatModeration } from '@/hooks/use-moderation'
+import { ReportContentModal } from '@/components/moderation/report-content-modal'
+import { EmojiPicker } from './emoji-picker'
+import { LocationShare, SharedLocationDisplay } from './location-share'
+import type { EnhancedChatMessage, ReactionEmoji } from '@/types'
 
-const EMOJIS: string[] = [
-  '\u{1F44D}', // thumbs up
-  '\u{2764}',  // red heart
-  '\u{1F602}', // face with tears of joy
-  '\u{1F389}', // party popper
-  '\u{1F525}', // fire
-  '\u{1F44F}', // clapping hands
-  '\u{1F64C}', // raising hands
-  '\u{1F4AF}'  // hundred points
-]
+const EMOJIS: ReactionEmoji[] = ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '🔥']
 
 interface Message {
   id: string
@@ -34,6 +30,7 @@ interface Message {
   }>
   reported?: boolean
   reportedBy?: string[]
+  location?: any
 }
 
 interface EventChatProps {
@@ -45,9 +42,14 @@ interface EventChatProps {
 
 export default function EventChat({ eventId, chatExpiration, attendees = [], creatorId }: EventChatProps) {
   const { user } = useAuth()
+  const chatModeration = useChatModeration()
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isExpired, setIsExpired] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null)
+  const [showLocationShare, setShowLocationShare] = useState(false)
+  const [reportModalOpen, setReportModalOpen] = useState(false)
+  const [reportTarget, setReportTarget] = useState<{ messageId: string; userId: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [showReactions, setShowReactions] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -92,10 +94,17 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Enviar mensaje
+  // Enviar mensaje con moderación
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim() || !user || isExpired) return
+
+    // Validar contenido con moderación
+    const moderationResult = chatModeration.checkContent(newMessage.trim())
+    
+    if (!moderationResult.isSafe && moderationResult.autoAction === 'block') {
+      return // Bloqueado automáticamente
+    }
 
     try {
       await addDoc(collection(db, 'events', eventId, 'messages'), {
@@ -106,7 +115,11 @@ export default function EventChat({ eventId, chatExpiration, attendees = [], cre
         timestamp: serverTimestamp(),
         reactions: [],
         reported: false,
-        reportedBy: []
+        reportedBy: [],
+        moderationResult: {
+          severity: moderationResult.severity,
+          confidence: moderationResult.confidence,
+        },
       })
 
       setNewMessage('')

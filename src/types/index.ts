@@ -149,8 +149,122 @@ export interface ChatSettings {
 }
 
 // ============================================================================
-// Recommendation System Types
+// Content Moderation System Types
 // ============================================================================
+
+/**
+ * Tipos de contenido a moderar
+ */
+export type ContentType = 'text' | 'image' | 'event' | 'user_profile' | 'chat_message'
+
+/**
+ * Nivel de severidad de contenido
+ */
+export type ContentSeverity = 'safe' | 'questionable' | 'inappropriate' | 'dangerous'
+
+/**
+ * Razones de moderación
+ */
+export type ModerationReason =
+  | 'profanity'
+  | 'hate_speech'
+  | 'harassment'
+  | 'spam'
+  | 'explicit_content'
+  | 'violence'
+  | 'self_harm'
+  | 'misinformation'
+  | 'scam'
+  | 'other'
+
+/**
+ * Resultado de moderación de contenido
+ */
+export interface ModerationResult {
+  isSafe: boolean
+  severity: ContentSeverity
+  confidence: number // 0-1
+  reasons: ModerationReason[]
+  flaggedWords?: string[]
+  suggestions?: string[]
+  autoAction?: 'allow' | 'review' | 'block'
+}
+
+/**
+ * Configuración de moderación automática
+ */
+export interface ModerationConfig {
+  enableProfanityFilter: boolean
+  enableSpamDetection: boolean
+  enableHateSpeechDetection: boolean
+  enableExplicitContentDetection: boolean
+  autoBlockDangerous: boolean
+  autoHideQuestionable: boolean
+  requireManualReview: boolean
+  bannedWords: string[]
+  spamPatterns: string[]
+}
+
+/**
+ * Reporte de contenido
+ */
+export interface ContentReport {
+  id: string
+  targetType: ContentType
+  targetId: string
+  targetUserId: string
+  reporterId: string
+  reason: ModerationReason
+  description?: string
+  status: 'pending' | 'reviewing' | 'approved' | 'rejected'
+  severity: ContentSeverity
+  createdAt: Date
+  reviewedAt?: Date
+  reviewedBy?: string // Admin ID
+  resolution?: string
+}
+
+/**
+ * Estadísticas de moderación
+ */
+export interface ModerationStats {
+  totalReports: number
+  pendingReports: number
+  approvedReports: number
+  rejectedReports: number
+  autoBlocked: number
+  autoHidden: number
+  manualReviews: number
+  avgReviewTime: number // minutos
+}
+
+/**
+ * Historial de acciones de moderación
+ */
+export interface ModerationAction {
+  id: string
+  userId: string
+  actionType: 'warn' | 'mute' | 'ban' | 'content_remove' | 'content_hide'
+  reason: string
+  expiresAt?: Date
+  createdAt: Date
+  createdBy: string // Admin ID
+}
+
+/**
+ * Estado de usuario en el sistema de moderación
+ */
+export interface UserModerationStatus {
+  userId: string
+  warnings: number
+  strikes: number
+  isBanned: boolean
+  isMuted: boolean
+  banExpiresAt?: Date
+  muteExpiresAt?: Date
+  lastViolationAt?: Date
+  trustScore: number // 0-100
+}
 
 /**
  * Categorías de eventos con pesos para recomendaciones
